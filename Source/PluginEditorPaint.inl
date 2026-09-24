@@ -231,12 +231,13 @@ void SalekHightechAudioProcessorEditor::paint (juce::Graphics& g)
                 drawIcon (11, juce::Rectangle<int> (r.getX() + 4, r.getY() + 4, 26, 26));
             }
         }
-        else if (atlas.isValid() && tabs.getCurrentTabIndex() == 2) // LFO
+        else if (tabs.getCurrentTabIndex() == 2) // LFO
         {
             auto r = getLocalArea (&lfoTab, lfoTab.getLocalBounds());
             auto drawIcon = [&] (int idx, int x)
             {
-                auto sub = atlas.getClippedImage ({ (idx%10)*64, (idx/10)*64, 64, 64 });
+                auto sub = SalekAssets::loadIcon (idx);
+                if (! sub.isValid()) return;
                 g.drawImage (sub, juce::Rectangle<float> ((float) x, (float) r.getY() + 4, 28.f, 28.f),
                              juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
             };
@@ -244,12 +245,13 @@ void SalekHightechAudioProcessorEditor::paint (juce::Graphics& g)
             drawIcon (18, r.getX() + 40);
             drawIcon (19, r.getX() + 72);
         }
-        else if (atlas.isValid() && tabs.getCurrentTabIndex() == 1) // MOD
+        else if (tabs.getCurrentTabIndex() == 1) // MOD
         {
             auto r = getLocalArea (&modTab, modTab.getLocalBounds());
             auto drawIcon = [&] (int idx, int x)
             {
-                auto sub = atlas.getClippedImage ({ (idx%10)*64, (idx/10)*64, 64, 64 });
+                auto sub = SalekAssets::loadIcon (idx);
+                if (! sub.isValid()) return;
                 g.drawImage (sub, juce::Rectangle<float> ((float) x, (float) r.getY() + 4, 28.f, 28.f),
                              juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
             };
@@ -257,14 +259,15 @@ void SalekHightechAudioProcessorEditor::paint (juce::Graphics& g)
             drawIcon (21, r.getX() + 40);
             drawIcon (5,  r.getX() + 72);
         }
-        else if (atlas.isValid() && tabs.getCurrentTabIndex() == 3) // FX
+        else if (tabs.getCurrentTabIndex() == 3) // FX
         {
             auto r = getLocalArea (&fxTab, fxTab.getLocalBounds());
             const int idxs[] = { 37, 36, 35, 9, 41, 40, 39, 32 };
             for (int i = 0; i < 8; ++i)
             {
                 int idx = idxs[i];
-                auto sub = atlas.getClippedImage ({ (idx%10)*64, (idx/10)*64, 64, 64 });
+                auto sub = SalekAssets::loadIcon (idx);
+                if (! sub.isValid()) continue;
                 float x = (float) r.getX() + 10.f + (float) (i % 2) * (r.getWidth() * 0.5f);
                 float y = (float) r.getY() + 8.f + (float) (i / 2) * (r.getHeight() * 0.22f);
                 g.drawImage (sub, juce::Rectangle<float> (x, y, 26.f, 26.f),

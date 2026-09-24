@@ -149,7 +149,7 @@ void SalekHightechAudioProcessorEditor::timerCallback()
     // NEVER full-editor repaint every tick — was freezing multi-instance FL
     // Light pulse only for mod source glow
     // Pulse LFO pills only when armed
-    if (armedModSource >= 0 && (ticks % 4) == 0)
+    if (armedModSource >= 0 && (layoutRecoveryTicks % 4) == 0)
     {
         if (armedModSource == 0) modSrcLfo1.repaint();
         if (armedModSource == 1) modSrcLfo2.repaint();
