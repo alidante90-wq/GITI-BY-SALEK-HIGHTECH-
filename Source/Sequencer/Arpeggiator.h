@@ -35,6 +35,7 @@ public:
     void setDirection (Direction d) noexcept { direction = d; }
     void setOctaves (int o) noexcept { octaves = juce::jlimit (1, 4, o); }
     void setGate (float g) noexcept { gate = juce::jlimit (0.05f, 1.0f, g); }
+    void setSwing (float s) noexcept { swing = juce::jlimit (0.0f, 0.75f, s); }
     void setEnabled (bool e) noexcept { enabled = e; if (!e) heldNotes.clear(); }
 
     void noteOn (int note, float velocity)
@@ -75,15 +76,19 @@ public:
                     outMidi.addEvent (juce::MidiMessage::noteOff (1, currentPlaying), i);
                     currentPlaying = -1;
                 }
+                int intervalSamples = samplesPerStep;
                 if (! pattern.empty())
                 {
+                    const int phase = stepIndex & 1;
+                    const float swingScale = phase == 0 ? (1.0f + swing) : (1.0f - swing);
+                    intervalSamples = juce::jmax (1, static_cast<int> (std::round (samplesPerStep * swingScale)));
                     auto& step = pattern[static_cast<size_t> (stepIndex % (int) pattern.size())];
                     outMidi.addEvent (juce::MidiMessage::noteOn (1, step.note, step.velocity), i);
                     currentPlaying = step.note;
-                    gateSamplesLeft = static_cast<int> (samplesPerStep * gate);
+                    gateSamplesLeft = juce::jmax (1, static_cast<int> (intervalSamples * gate));
                     stepIndex++;
                 }
-                sampleCounter = samplesPerStep;
+                sampleCounter = intervalSamples;
             }
 
             if (currentPlaying >= 0 && gateSamplesLeft > 0)
@@ -148,6 +153,7 @@ private:
     int currentPlaying = -1;
     int octaves = 1;
     float gate = 0.6f;
+    float swing = 0.0f;
     bool enabled = false;
     Direction direction = Direction::Up;
     std::vector<Note> heldNotes;

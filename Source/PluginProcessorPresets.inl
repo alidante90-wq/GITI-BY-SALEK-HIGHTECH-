@@ -64,7 +64,7 @@ void SalekHightechAudioProcessor::initFactoryPresets()
         {"lfo_amount",0.25f},{"lfo_rate",0.8f},
         {"chorus_mix",0.28f},{"delay_mix",0.3f},{"reverb_mix",0.25f},{"reverb_size",0.7f},{"master_drive",0.35f}
     });
-    add("HITECH/Crystal Grid", {
+    add("HIGHTECH/Crystal Grid", {
         {"osc1_level",0.9f},{"osc1_table",0.4f},{"osc1_fold",0.15f},{"osc1_warp",0.05f},{"osc1_drive",0.1f},
         {"osc1_unison",3},{"osc1_udet",8},{"osc1_uspread",0.7f},{"osc1_octave",0},{"osc1_semi",0},
         {"osc2_level",0},{"osc3_level",0},{"fm_2to1",0},
@@ -73,7 +73,7 @@ void SalekHightechAudioProcessor::initFactoryPresets()
         {"lfo_amount",0},{"noise_level",0},{"sub_level",0},
         {"reverb_mix",0.45f},{"reverb_size",0.85f},{"delay_mix",0.35f},{"delay_mode",1},{"chorus_mix",0.2f}
     });
-    add("HITEK/Wireframe Lead", {
+    add("HIGHTECH/Wireframe Lead", {
         {"osc1_level",1.0f},{"osc1_table",0.88f},{"osc1_drive",0.4f},{"osc1_fold",0.2f},{"osc1_warp",0.15f},
         {"osc1_unison",4},{"osc1_udet",14},{"osc1_uspread",0.8f},{"osc1_octave",0},{"osc1_semi",0},
         {"osc2_level",0.2f},{"osc2_table",0.6f},{"osc2_semi",12},{"osc2_unison",1},

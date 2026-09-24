@@ -183,6 +183,7 @@ void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         arpeggiator.setRateDivisor ((int) apvts.getRawParameterValue("arp_rate")->load());
         arpeggiator.setOctaves ((int) apvts.getRawParameterValue("arp_octaves")->load());
         arpeggiator.setGate (apvts.getRawParameterValue("arp_gate")->load());
+        arpeggiator.setSwing (apvts.getRawParameterValue("arp_swing")->load());
         juce::MidiBuffer arpIn;
         for (const auto metadata : routed)
         {

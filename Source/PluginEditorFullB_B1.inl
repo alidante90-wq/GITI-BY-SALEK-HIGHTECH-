@@ -591,12 +591,36 @@ void SalekHightechAudioProcessorEditor::resized()
     // SEQ
     {
         auto bounds = seqTab.getLocalBounds().reduced (6);
-        auto top = bounds.removeFromTop (88);
+        auto top = bounds.removeFromTop (116);
         auto toggles = top.removeFromLeft (120);
         arpOn.setBounds (toggles.removeFromTop (36).reduced (2));
         seqOn.setBounds (toggles.removeFromTop (36).reduced (2));
-        const int seqKnobStart = juce::jmax (0, (int) knobs.size() - 7);
-        place (top.reduced (4), knobs, seqKnobStart, 3, 3);
+        auto placeSeqKnob = [this] (juce::Rectangle<int> cell, const char* id)
+        {
+            for (auto& owned : knobs)
+                if (owned != nullptr && owned->paramId == id)
+                {
+                    cell = cell.reduced (2, 0);
+                    owned->name.setBounds (cell.removeFromBottom (13));
+                    owned->name.setJustificationType (juce::Justification::centred);
+                    owned->name.setVisible (true);
+                    owned->s.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 48, 12);
+                    owned->s.setBounds (cell);
+                    owned->s.setVisible (true);
+                    break;
+                }
+        };
+        auto controls = top.reduced (4, 1);
+        const int controlWidth = controls.getWidth() / 4;
+        const char* arpIds[] = { "arp_rate", "arp_octaves", "arp_gate", "arp_swing" };
+        const char* seqIds[] = { "seq_rate", "seq_length", "seq_swing", "seq_gate" };
+        auto arpRow = controls.removeFromTop (controls.getHeight() / 2);
+        auto seqRow = controls;
+        for (int i = 0; i < 4; ++i)
+        {
+            placeSeqKnob ({ arpRow.getX() + i * controlWidth, arpRow.getY(), controlWidth, arpRow.getHeight() }, arpIds[i]);
+            placeSeqKnob ({ seqRow.getX() + i * controlWidth, seqRow.getY(), controlWidth, seqRow.getHeight() }, seqIds[i]);
+        }
         // 2 rows of Magic trigger buttons under seq strip
         {
             auto magicStrip = bounds.removeFromBottom (64).reduced (2, 1);
