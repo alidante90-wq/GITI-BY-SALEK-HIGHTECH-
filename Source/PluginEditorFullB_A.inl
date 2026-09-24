@@ -106,9 +106,25 @@ void SalekHightechAudioProcessorEditor::listBoxItemClicked (int row, const juce:
 void SalekHightechAudioProcessorEditor::timerCallback()
 {
     ++layoutRecoveryTicks;
-    // Retry layout about once a second, per editor. Hosts sometimes restore a
-    // plug-in window without a usable resize event after minimizing it.
-    if ((layoutRecoveryTicks % 3) == 0 && getWidth() >= 900 && getHeight() >= 600)
+    // Some DAWs hide the editor during minimize/restore without sending a
+    // resize. Detect the visibility transition and rebuild once bounds settle.
+    const bool showing = isShowing();
+    if (showing && ! editorWasShowing)
+        restoreLayoutDelay = 1;
+    editorWasShowing = showing;
+    if (showing && restoreLayoutDelay > 0 && getWidth() >= 900 && getHeight() >= 600)
+    {
+        --restoreLayoutDelay;
+        if (restoreLayoutDelay == 0)
+        {
+            resized();
+            repaint();
+        }
+    }
+    // Slow safety net if the host drops child bounds but keeps the top-level
+    // editor visible. Avoid running it during an active mouse gesture.
+    if ((layoutRecoveryTicks % 15) == 0 && showing && getWidth() >= 900 && getHeight() >= 600
+        && ! juce::Desktop::getInstance().getMainMouseSource().isDragging())
     {
         const int tab = tabs.getCurrentTabIndex();
         const juce::Component* active = tab == 0 ? &mainTab : tab == 1 ? &modTab
