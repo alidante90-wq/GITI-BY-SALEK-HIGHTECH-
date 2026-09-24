@@ -1,0 +1,109 @@
+param(
+    [int] $Cycles = 5,
+    [int] $MinimizedSeconds = 1,
+    [int] $PauseBetweenCyclesSeconds = 3,
+    [string] $OutputDirectory = (Join-Path $env:TEMP ("SALEK-FL-restore-" + (Get-Date -Format "yyyyMMdd-HHmmss")))
+)
+
+$ErrorActionPreference = 'Stop'
+
+Add-Type -TypeDefinition @'
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+public static class SalekWindowProbe
+{
+    public delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+
+    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hwnd);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int maxCount);
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+    [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hwnd, int command);
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
+}
+'@
+
+function Get-SalekPluginWindows {
+    $flProcesses = @(Get-Process -Name FL64 -ErrorAction SilentlyContinue | ForEach-Object { [uint32] $_.Id })
+    if ($flProcesses.Count -eq 0) { throw 'FL Studio is not running. Open FL Studio and the SALEK plug-in editor first.' }
+
+    $found = [System.Collections.Generic.List[object]]::new()
+    $callback = [SalekWindowProbe+EnumWindowsProc] {
+        param([IntPtr] $hwnd, [IntPtr] $lParam)
+        if (-not [SalekWindowProbe]::IsWindowVisible($hwnd)) { return $true }
+        $pid = [uint32] 0
+        [void] [SalekWindowProbe]::GetWindowThreadProcessId($hwnd, [ref] $pid)
+        if ($pid -notin $flProcesses) { return $true }
+        $text = [System.Text.StringBuilder]::new(512)
+        [void] [SalekWindowProbe]::GetWindowText($hwnd, $text, $text.Capacity)
+        $title = $text.ToString()
+        if ($title -notmatch '(?i)(SALEK|GITI)' -or $title -match '(?i)FL Studio') { return $true }
+        $rect = [SalekWindowProbe+RECT]::new()
+        if ([SalekWindowProbe]::GetWindowRect($hwnd, [ref] $rect)) {
+            $width = $rect.Right - $rect.Left
+            $height = $rect.Bottom - $rect.Top
+            if ($width -ge 500 -and $height -ge 350) {
+                $found.Add([pscustomobject]@{
+                    Handle = $hwnd; Title = $title; Left = $rect.Left; Top = $rect.Top
+                    Width = $width; Height = $height; Area = $width * $height
+                })
+            }
+        }
+        return $true
+    }
+    [void] [SalekWindowProbe]::EnumWindows($callback, [IntPtr]::Zero)
+    return @($found | Sort-Object Area -Descending)
+}
+
+if ($Cycles -lt 1 -or $Cycles -gt 30) { throw 'Cycles must be between 1 and 30.' }
+if ($MinimizedSeconds -lt 1 -or $MinimizedSeconds -gt 10) { throw 'MinimizedSeconds must be between 1 and 10.' }
+
+$windows = @(Get-SalekPluginWindows)
+if ($windows.Count -eq 0) {
+    throw 'No visible SALEK/GITI plug-in editor window was found in FL Studio. Open the synth window and run this script again.'
+}
+$target = $windows[0]
+New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+Add-Type -AssemblyName System.Drawing
+
+function Save-PluginSnapshot([int] $Cycle, [string] $Stage, $WindowInfo) {
+    $rect = [SalekWindowProbe+RECT]::new()
+    if (-not [SalekWindowProbe]::GetWindowRect($WindowInfo.Handle, [ref] $rect)) { return }
+    $width = [Math]::Max(1, $rect.Right - $rect.Left)
+    $height = [Math]::Max(1, $rect.Bottom - $rect.Top)
+    $bitmap = [System.Drawing.Bitmap]::new($width, $height)
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    try {
+        $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, [System.Drawing.Size]::new($width, $height))
+        $safeStage = $Stage -replace '[^A-Za-z0-9_-]', '_'
+        $path = Join-Path $OutputDirectory ("cycle-{0:D2}-{1}.png" -f $Cycle, $safeStage)
+        $bitmap.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+        [pscustomobject]@{ Cycle = $Cycle; Stage = $Stage; Title = $WindowInfo.Title; Width = $width; Height = $height; Screenshot = $path }
+    }
+    finally {
+        $graphics.Dispose()
+        $bitmap.Dispose()
+    }
+}
+
+Write-Host ("Testing '{0}' ({1} x {2}); snapshots: {3}" -f $target.Title, $target.Width, $target.Height, $OutputDirectory)
+$results = [System.Collections.Generic.List[object]]::new()
+for ($cycle = 1; $cycle -le $Cycles; $cycle++) {
+    [void] [SalekWindowProbe]::SetForegroundWindow($target.Handle)
+    Start-Sleep -Milliseconds 250
+    $results.Add((Save-PluginSnapshot $cycle 'before' $target))
+    [void] [SalekWindowProbe]::ShowWindowAsync($target.Handle, 6) # SW_MINIMIZE
+    Start-Sleep -Seconds $MinimizedSeconds
+    [void] [SalekWindowProbe]::ShowWindowAsync($target.Handle, 9) # SW_RESTORE
+    [void] [SalekWindowProbe]::SetForegroundWindow($target.Handle)
+    Start-Sleep -Seconds 2
+    $results.Add((Save-PluginSnapshot $cycle 'restored' $target))
+    Start-Sleep -Seconds $PauseBetweenCyclesSeconds
+}
+
+$results | Format-Table Cycle, Stage, Title, Width, Height, Screenshot -AutoSize
+Write-Host 'Compare each before/restored screenshot: the restored image should show the complete plug-in control surface.'
