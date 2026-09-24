@@ -105,15 +105,16 @@ void SalekHightechAudioProcessorEditor::listBoxItemClicked (int row, const juce:
 
 void SalekHightechAudioProcessorEditor::timerCallback()
 {
-    static int ticks = 0;
-    ++ticks;
-    // Layout settle once (was 6 full resized — expensive)
-    if (ticks == 1 || ticks == 3)
-        resized();
-    else if ((ticks % 60) == 0)
+    ++layoutRecoveryTicks;
+    // Retry layout about once a second, per editor. Hosts sometimes restore a
+    // plug-in window without a usable resize event after minimizing it.
+    if ((layoutRecoveryTicks % 3) == 0 && getWidth() >= 900 && getHeight() >= 600)
     {
-        if (tabs.getCurrentTabIndex() == 0
-            && (oscTab.getWidth() < 50 || oscTab.getHeight() < 50 || mainTab.getWidth() < 100))
+        const int tab = tabs.getCurrentTabIndex();
+        const juce::Component* active = tab == 0 ? &mainTab : tab == 1 ? &modTab
+            : tab == 2 ? &lfoTab : tab == 3 ? &fxTab : tab == 4 ? &magicTab : &seqTab;
+        if (tabs.getWidth() < 500 || tabs.getHeight() < 300
+            || active->getWidth() < 400 || active->getHeight() < 250)
             resized();
     }
     animPhase += 0.02f;

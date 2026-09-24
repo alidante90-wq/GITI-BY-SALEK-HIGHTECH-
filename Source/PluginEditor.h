@@ -305,6 +305,7 @@ private:
     juce::TextButton modSrcLfo1 { "LFO1" }, modSrcLfo2 { "LFO2" }, modSrcLfo3 { "LFO3" };
     int armedModSource = -1; // 0/1/2 = LFO1/2/3 for click-to-assign
     bool isModDragging = false; // true while dragging from LFO pill
+    int layoutRecoveryTicks = 0;
     juce::Slider masterGainSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> masterGainAtt;
     juce::TextButton langToggle { "EN" };   // EN <-> FA

@@ -33,6 +33,8 @@ juce_add_plugin(GITI_BY_SALEK_HIGHTECH
 
 juce_generate_juce_header(GITI_BY_SALEK_HIGHTECH)
 
+file(GLOB SALEK_ICON_ASSETS CONFIGURE_DEPENDS "Source/Assets/icons/*.png")
+
 juce_add_binary_data(SalekBinaryAssets SOURCES
     "Source/Assets/bg_isatis.jpg"
     "Source/Assets/bg_salek.jpg"
@@ -50,6 +52,7 @@ juce_add_binary_data(SalekBinaryAssets SOURCES
     "Source/Assets/char_gun.png"
     "Source/Assets/char_purple_latex.png"
     "Source/Assets/char_white_suit.png"
+    ${SALEK_ICON_ASSETS}
 )
 
 target_sources(GITI_BY_SALEK_HIGHTECH PRIVATE

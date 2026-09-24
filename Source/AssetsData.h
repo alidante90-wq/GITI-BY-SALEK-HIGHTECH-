@@ -134,15 +134,37 @@ inline juce::Image loadIconsAtlas()
     return img;
 }
 
-/** 0..49 from SALEK 50-icon pack (atlas 10 cols x 5 rows, 64px cells). */
+/** 0..49 in the supplied SALEK icon pack order. Individual PNGs are embedded
+    so the DAW never depends on a loose atlas file or the current directory. */
 inline juce::Image loadIcon (int index)
 {
-    auto atlas = loadIconsAtlas();
-    if (! atlas.isValid()) return {};
     index = juce::jlimit (0, 49, index);
-    const int col = index % 10;
-    const int row = index / 10;
-    return atlas.getClippedImage (juce::Rectangle<int> (col * 64, row * 64, 64, 64));
+    static constexpr const char* names[] = {
+        "osc1", "osc2", "osc3", "wavetable", "frame_morph", "fm", "am", "rm", "pm", "sub",
+        "noise", "filter1", "filter2", "filter3", "filter4", "envelope", "multistage", "lfo", "lfo_sync", "lfo_random",
+        "matrix", "macro", "mod_routing", "vca", "vcf", "arp", "seq", "random", "sample_hold", "pitch",
+        "glide", "portamento", "distortion", "wavefold", "phase_dist", "reverb", "delay", "chorus", "flanger", "phaser",
+        "eq", "compressor", "saturation", "limiter", "tape", "lofi", "filter_env", "transpose", "randomize", "master"
+    };
+    const auto stem = juce::String ("icon_") + names[index];
+#if SALEK_HAS_BINARY_DATA
+    // JUCE resource identifiers are normally based on the filename. Try path
+    // variants too, so this remains robust across JUCE/CMake versions.
+    for (auto resource : { stem + "_png", juce::String ("icons_") + stem + "_png",
+                           juce::String ("Source_Assets_icons_") + stem + "_png" })
+    {
+        auto img = fromBinaryName (resource.toRawUTF8());
+        if (img.isValid()) return img;
+    }
+#endif
+    auto dir = findAssetsDir();
+    auto file = dir.getChildFile ("icons").getChildFile (stem + ".png");
+    if (file.existsAsFile())
+    {
+        auto img = juce::ImageFileFormat::loadFrom (file);
+        if (img.isValid()) return img;
+    }
+    return {};
 }
 
 inline juce::Image loadSalekSheetLogo()

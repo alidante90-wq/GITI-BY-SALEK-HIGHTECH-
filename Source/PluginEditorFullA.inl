@@ -164,6 +164,19 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
             if (e.mods.isRightButtonDown()) amt = 0.f;
             ed->tryAssignModAt (pos, amt, e.mods);
         }
+        void mouseDrag (const juce::MouseEvent& e) override
+        {
+            if (ed == nullptr || e.getDistanceFromDragStart() < 3)
+                return;
+            if (e.eventComponent == &ed->modSrcLfo1) ed->armedModSource = 0;
+            else if (e.eventComponent == &ed->modSrcLfo2) ed->armedModSource = 1;
+            else if (e.eventComponent == &ed->modSrcLfo3) ed->armedModSource = 2;
+            else return;
+            // This capture-phase listener sees the gesture even when a DAW
+            // keeps the mouse attached to the source button while dragging.
+            ed->isModDragging = true;
+            ed->setMouseCursor (juce::MouseCursor::CopyingCursor);
+        }
         void mouseUp (const juce::MouseEvent& e) override
         {
             if (ed == nullptr || ! ed->isModDragging) return;

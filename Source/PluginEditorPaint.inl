@@ -185,15 +185,13 @@ void SalekHightechAudioProcessorEditor::paint (juce::Graphics& g)
 
     // SALEK icon badges (paint fallback — always visible if atlas loads)
     {
-        auto atlas = SalekAssets::loadIconsAtlas();
-        if (atlas.isValid() && tabs.getCurrentTabIndex() == 0)
+        if (tabs.getCurrentTabIndex() == 0)
         {
             auto drawIcon = [&] (int idx, juce::Rectangle<int> dest)
             {
                 if (dest.getWidth() < 8) return;
                 idx = juce::jlimit (0, 49, idx);
-                auto src = juce::Rectangle<int> ((idx % 10) * 64, (idx / 10) * 64, 64, 64);
-                auto sub = atlas.isValid() ? atlas.getClippedImage (src) : juce::Image();
+                auto sub = SalekAssets::loadIcon (idx);
                 if (sub.isValid())
                 {
                     g.setOpacity (1.f);

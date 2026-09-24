@@ -1,6 +1,10 @@
 void SalekHightechAudioProcessorEditor::resized()
 {
     auto full = getLocalBounds();
+    // DAWs can briefly report a minimized/zero client area while hiding and
+    // restoring an editor. Keep the last valid layout until real bounds return.
+    if (full.getWidth() < 900 || full.getHeight() < 600)
+        return;
 
     auto place = [this] (juce::Rectangle<int> area, auto& arr, int start, int count, int cols, int maxCell = 0)
     {
