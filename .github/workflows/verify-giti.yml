@@ -1,0 +1,24 @@
+name: Verify GITI presets
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Engineered has 50 GITI presets
+        run: |
+          f=Source/PluginProcessorPresetsEngineered.inl
+          test -f "$f"
+          n=$(grep -c 'GITI/' "$f" || true)
+          echo "GITI count: $n"
+          test "$n" -ge 50
+          echo "OK — 50 GITI factory presets present"
+      - name: List package files
+        run: |
+          ls -la Source/
+          ls -la dist/ || true
