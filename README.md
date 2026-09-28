@@ -1,34 +1,9 @@
 # GITI BY SALEK HIGHTECH
 
-Factory presets for SALEK HIGHTECH VST — **GITI 001–050**.
+**50 factory presets** for SALEK HIGHTECH VST, ready to drop into `Source/`.
 
-## Quick drop-in
+- `GITI/001 The First Breath` … `GITI/050 The Last Voice`
+- Self-contained `PluginProcessorPresetsEngineered.inl` (no broken includes)
+- No UI layout changes, no Web3
 
-Copy into your SALEK HIGHTECH `Source/` folder:
-
-| File | Action |
-|------|--------|
-| `PluginProcessorPresetsEngineered.inl` | **Replace** existing (self-contained: core banks + all 50 GITI) |
-| `PluginProcessorPresetsGITI.inl` | Optional stub (safe if included) |
-| `GitiIdentities.h` | Optional identity metadata |
-
-Your `PluginProcessorPresets.inl` should already end with:
-
-```cpp
-#include "PluginProcessorPresetsEngineered.inl"
-}
-```
-
-Then rebuild the VST.
-
-## Preset names in host
-
-- `GITI/001 The First Breath`
-- …
-- `GITI/050 The Last Voice`
-
-## Notes
-
-- No nested missing includes (build-safe).
-- No Web3 / wallet / mint in this package.
-- Original SALEK UI layout unchanged.
+See [INSTALL.md](INSTALL.md).
