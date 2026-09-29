@@ -166,6 +166,12 @@ void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
+    if (presetVoiceResetRequested.exchange (false, std::memory_order_acquire))
+    {
+        keyboardState.allNotesOff (0);
+        synthEngine.allNotesOff();
+    }
+
     applyParamsToEngine();
     keyboardState.processNextMidiBuffer (midi, 0, buffer.getNumSamples(), true);
 

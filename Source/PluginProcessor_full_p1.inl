@@ -133,8 +133,9 @@ void SalekHightechAudioProcessor::loadFactoryPreset(int index)
         if (auto* p = apvts.getParameter(kv.first))
             if (auto* rp = dynamic_cast<juce::RangedAudioParameter*>(p))
                 rp->setValueNotifyingHost(rp->convertTo0to1(kv.second));
-    keyboardState.allNotesOff (0);
-    synthEngine.allNotesOff();
+    // Voice objects are owned by the audio engine. Do not touch Synthesiser
+    // from the UI/host preset callback while renderNextBlock may be running.
+    presetVoiceResetRequested.store (true, std::memory_order_release);
 }
 
 juce::StringArray SalekHightechAudioProcessor::getPresetNames() const

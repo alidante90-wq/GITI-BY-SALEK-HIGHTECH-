@@ -107,6 +107,7 @@ private:
     VisualFifo visualFifo;
     std::atomic<float> outputPeak { 0.f };
     std::atomic<float> audioLoadPercent { 0.f }, audioPeakLoadPercent { 0.f }, audioCallbackMs { 0.f };
+    std::atomic<bool> presetVoiceResetRequested { false };
     shae::SafetyStage shaeSafety;
 
     struct FactoryPreset { juce::String name; std::map<juce::String, float> values; };
