@@ -32,6 +32,7 @@ inline void WavetableDisplay::paint (juce::Graphics& g) {
 }
 
 #include "PluginEditorVisualizers.inl"
+#include "PluginEditorAboutPerformance.inl"
 
 class AdsrDisplay : public juce::Component, private juce::Timer {
 public:
@@ -280,7 +281,7 @@ private:
     std::vector<std::unique_ptr<SAtt>> atts;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>> comboAtts;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>> btnAtts;
-    juce::Component mainTab, oscTab, filterTab, envTab, modTab, lfoTab, fxTab, magicTab, seqTab, presetTab, modularTab;
+    juce::Component mainTab, oscTab, filterTab, envTab, modTab, lfoTab, fxTab, magicTab, seqTab, speedTab, aboutTab, presetTab, modularTab;
     juce::ComboBox themeBox;
     juce::ComboBox presetFilterBox;
     juce::ComboBox filterMode, lfoWave;
@@ -292,6 +293,8 @@ private:
     juce::Label presetLabel, title, tagline;
     juce::ListBox presetList { "presets", this };
     std::unique_ptr<StepGridComponent> stepGrid;
+    std::unique_ptr<AudioSpeedMonitor> speedMonitor;
+    std::unique_ptr<AboutInfoPanel> aboutInfo;
     juce::OwnedArray<juce::Label> fxSectionLabels;
     juce::OwnedArray<juce::ImageComponent> fxSectionIcons;
     juce::OwnedArray<juce::ImageComponent> tabSectionIcons; // MAIN/LFO/MOD badges

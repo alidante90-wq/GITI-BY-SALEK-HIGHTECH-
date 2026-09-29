@@ -112,6 +112,9 @@ void SalekHightechAudioProcessorEditor::applyUiLanguage()
     tabs.setTabName (3, "FX");
     tabs.setTabName (4, "MAGIC");
     tabs.setTabName (5, "SEQ");
+    tabs.setTabName (6, "SPEED");
+    tabs.setTabName (7, "ABOUT");
+    aboutInfo->setPersian (uiLangFa);
     magicLoopBtn.setButtonText ("LOOP");
     magicGlitchBtn.setButtonText ("GLITCH");
     magicFlangeBtn.setButtonText ("FLANGE");

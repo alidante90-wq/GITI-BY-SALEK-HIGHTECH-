@@ -20,6 +20,7 @@
 #include <map>
 #include <vector>
 #include <atomic>
+#include <chrono>
 
 class SalekHightechAudioProcessor : public juce::AudioProcessor
 {
@@ -54,6 +55,9 @@ public:
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
     juce::MidiKeyboardState& getKeyboardState() { return keyboardState; }
     float getOutputPeak() const { return outputPeak.load(); }
+    float getAudioLoadPercent() const noexcept { return audioLoadPercent.load (std::memory_order_relaxed); }
+    float getAudioPeakLoadPercent() const noexcept { return audioPeakLoadPercent.load (std::memory_order_relaxed); }
+    float getAudioCallbackMs() const noexcept { return audioCallbackMs.load (std::memory_order_relaxed); }
     VisualFifo& getVisualFifo() { return visualFifo; }
     salek::StepSequencer& getStepSequencer() { return stepSequencer; }
     salek::Arpeggiator& getArpeggiator() { return arpeggiator; }
@@ -102,6 +106,7 @@ private:
     juce::MidiKeyboardState keyboardState;
     VisualFifo visualFifo;
     std::atomic<float> outputPeak { 0.f };
+    std::atomic<float> audioLoadPercent { 0.f }, audioPeakLoadPercent { 0.f }, audioCallbackMs { 0.f };
     shae::SafetyStage shaeSafety;
 
     struct FactoryPreset { juce::String name; std::map<juce::String, float> values; };

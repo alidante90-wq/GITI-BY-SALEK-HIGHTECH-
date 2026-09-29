@@ -272,6 +272,10 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
     filterDisplay = std::make_unique<FilterCurveDisplay> (processor.getAPVTS());
     lfoDisplay = std::make_unique<LfoDisplay> (processor.getAPVTS());
     matrixPanel = std::make_unique<ModMatrixPanel> (processor.getModMatrix());
+    speedMonitor = std::make_unique<AudioSpeedMonitor> (processor);
+    aboutInfo = std::make_unique<AboutInfoPanel>();
+    speedTab.addAndMakeVisible (*speedMonitor);
+    aboutTab.addAndMakeVisible (*aboutInfo);
 
     tabs.addTab ("MAIN", juce::Colours::transparentBlack, &mainTab, false);
     tabs.addTab ("MOD", juce::Colours::transparentBlack, &modTab, false);
@@ -299,13 +303,15 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
     }
 
     tabs.addTab ("SEQ", juce::Colours::transparentBlack, &seqTab, false);
+    tabs.addTab ("SPEED", juce::Colours::transparentBlack, &speedTab, false);
+    tabs.addTab ("ABOUT", juce::Colours::transparentBlack, &aboutTab, false);
     addAndMakeVisible (tabs);
     tabs.setTabBarDepth (28);
     // Glass UI: transparent so animated theme shows through (no solid pink slab)
     tabs.setOpaque (false);
     tabs.setColour (juce::TabbedComponent::backgroundColourId, juce::Colours::transparentBlack);
     tabs.setColour (juce::TabbedComponent::outlineColourId, juce::Colour (0x55ffffff));
-    for (auto* panel : { &mainTab, &modTab, &lfoTab, &magicTab, &seqTab, &oscTab, &filterTab, &envTab, &presetTab })
+    for (auto* panel : { &mainTab, &modTab, &lfoTab, &magicTab, &seqTab, &speedTab, &aboutTab, &oscTab, &filterTab, &envTab, &presetTab })
     {
         panel->setOpaque (false);
         panel->setColour (juce::ResizableWindow::backgroundColourId, juce::Colours::transparentBlack);

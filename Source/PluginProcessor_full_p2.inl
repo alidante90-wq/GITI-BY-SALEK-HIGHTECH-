@@ -161,6 +161,7 @@ void SalekHightechAudioProcessor::applyParamsToEngine()
 
 void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
+    const auto callbackStart = std::chrono::steady_clock::now();
     juce::ScopedNoDenormals noDenormals;
     for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
@@ -321,6 +322,19 @@ void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         peak = juce::jmax (peak, buffer.getMagnitude (ch, 0, buffer.getNumSamples()));
     outputPeak.store (peak);
     visualFifo.pushStereo (buffer);
+
+    const float elapsedMs = std::chrono::duration<float, std::milli> (
+        std::chrono::steady_clock::now() - callbackStart).count();
+    const double sampleRate = getSampleRate();
+    const float budgetMs = sampleRate > 0.0
+        ? (1000.0f * (float) buffer.getNumSamples() / (float) sampleRate) : 0.0f;
+    const float load = budgetMs > 0.0f ? juce::jlimit (0.f, 999.f, elapsedMs * 100.f / budgetMs) : 0.f;
+    const float prior = audioLoadPercent.load (std::memory_order_relaxed);
+    audioLoadPercent.store (prior + 0.18f * (load - prior), std::memory_order_relaxed);
+    audioCallbackMs.store (elapsedMs, std::memory_order_relaxed);
+    float peakLoad = audioPeakLoadPercent.load (std::memory_order_relaxed);
+    while (load > peakLoad && ! audioPeakLoadPercent.compare_exchange_weak (
+               peakLoad, load, std::memory_order_relaxed, std::memory_order_relaxed)) {}
 }
 
 void SalekHightechAudioProcessor::getStateInformation (juce::MemoryBlock& destData)

@@ -129,7 +129,8 @@ void SalekHightechAudioProcessorEditor::timerCallback()
     {
         const int tab = tabs.getCurrentTabIndex();
         const juce::Component* active = tab == 0 ? &mainTab : tab == 1 ? &modTab
-            : tab == 2 ? &lfoTab : tab == 3 ? &fxTab : tab == 4 ? &magicTab : &seqTab;
+            : tab == 2 ? &lfoTab : tab == 3 ? &fxTab : tab == 4 ? &magicTab
+            : tab == 5 ? &seqTab : tab == 6 ? &speedTab : &aboutTab;
         if (tabs.getWidth() < 500 || tabs.getHeight() < 300
             || active->getWidth() < 400 || active->getHeight() < 250)
             resized();

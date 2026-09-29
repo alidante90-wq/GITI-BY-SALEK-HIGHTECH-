@@ -654,4 +654,7 @@ void SalekHightechAudioProcessorEditor::resized()
         if (stepGrid != nullptr)
             stepGrid->setBounds (bounds);
     }
+
+    speedMonitor->setBounds (speedTab.getLocalBounds().reduced (14));
+    aboutInfo->setBounds (aboutTab.getLocalBounds().reduced (8));
 }
