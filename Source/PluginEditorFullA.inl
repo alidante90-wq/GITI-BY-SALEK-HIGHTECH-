@@ -255,9 +255,6 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
     masterGainAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
         processor.getAPVTS(), "master_gain", masterGainSlider);
 
-    setSize (1280, 820);
-    setResizable (true, true);
-    setResizeLimits (1020, 700, 1700, 1100);
     title.setText ("SALEK HIGHTECH", juce::dontSendNotification);
     addAndMakeVisible (title);
     tagline.setText ("ALIEN", juce::dontSendNotification);
@@ -630,6 +627,13 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
         collapsedCats = cats;
         rebuildPresetRows();
     }
+
+    // Set the initial size only after every child used by resized() exists.
+    // Component::setSize may synchronously call resized(); doing this earlier
+    // dereferenced the not-yet-created speed monitor and About panel.
+    setResizable (true, true);
+    setResizeLimits (1020, 700, 1700, 1100);
+    setSize (1280, 820);
 }
 
 SalekHightechAudioProcessorEditor::~SalekHightechAudioProcessorEditor()
