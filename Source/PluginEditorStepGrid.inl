@@ -41,7 +41,7 @@ public:
         g.fillRoundedRectangle (header.reduced (1.0f), 8.0f);
         g.setColour (juce::Colour (0xff00e8ff).withAlpha (0.7f));
         g.setFont (juce::FontOptions (11.0f, juce::Font::bold));
-        g.drawText ("SEQ  ·  click=on  drag=vel  alt=gate  shift=pitch  ctrl=accent  wheel=pitch",
+        g.drawText ("SEQ  ·  click=on  drag=vel  alt=gate  shift=pitch  ctrl=accent  middle-drag=Magic XY",
                     header.withTrimmedLeft (170.0f).reduced (4, 0),
                     juce::Justification::centredLeft, false);
 
@@ -113,6 +113,11 @@ public:
                 }
             }
 
+            // Gold lane is the per-step automation value sent to Magic X/Y.
+            const float modY = cell.getBottom() - juce::jlimit (0.f, 1.f, st.modValue) * cell.getHeight();
+            g.setColour (juce::Colour (0xffffd700).withAlpha (on ? 0.9f : 0.3f));
+            g.drawHorizontalLine ((int) modY, cell.getX() + 2.f, cell.getRight() - 2.f);
+
             if (isPlay)
             {
                 g.setColour (juce::Colour (0xffffd700).withAlpha (0.95f));
@@ -137,6 +142,15 @@ public:
         int idx = hitStep (e.position);
         if (idx < 0) return;
         auto& st = sequencer.getStep (idx);
+
+        if (e.mods.isMiddleButtonDown())
+        {
+            setModValueFromY (idx, e.position.y);
+            st.active = true;
+            dragModStep = idx;
+            repaint();
+            return;
+        }
 
         if (e.mods.isRightButtonDown())
         {
@@ -171,6 +185,12 @@ public:
 
     void mouseDrag (const juce::MouseEvent& e) override
     {
+        if (dragModStep >= 0 && e.mods.isMiddleButtonDown())
+        {
+            setModValueFromY (dragModStep, e.position.y);
+            repaint();
+            return;
+        }
         int idx = hitStep (e.position);
         if (idx < 0) return;
         auto& st = sequencer.getStep (idx);
@@ -192,6 +212,8 @@ public:
         repaint();
     }
 
+    void mouseUp (const juce::MouseEvent&) override { dragModStep = -1; }
+
     void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override
     {
         int idx = hitStep (e.position);
@@ -209,6 +231,16 @@ public:
 private:
     salek::StepSequencer& sequencer;
     juce::TextButton clearBtn, randBtn, fillBtn;
+    int dragModStep = -1;
+
+    void setModValueFromY (int idx, float y)
+    {
+        auto r = getLocalBounds().toFloat();
+        r.removeFromTop (28.0f);
+        r = r.reduced (4.0f);
+        const float h = juce::jmax (1.f, r.getHeight() - 24.0f);
+        sequencer.getStep (idx).modValue = juce::jlimit (0.f, 1.f, 1.f - (y - r.getY() - 4.f) / h);
+    }
 
     int hitStep (juce::Point<float> pos) const
     {
@@ -230,6 +262,7 @@ private:
         {
             auto& st = sequencer.getStep (i);
             st.active = false; st.velocity = 0.8f; st.gate = 0.6f; st.noteOffset = 0; st.accent = false;
+            st.modValue = (float) i / (float) juce::jmax (1, salek::StepSequencer::NumSteps - 1);
         }
         repaint();
     }
@@ -244,6 +277,7 @@ private:
             st.velocity = 0.4f + rng.nextFloat() * 0.6f;
             st.gate = 0.3f + rng.nextFloat() * 0.6f;
             st.noteOffset = 0;
+            st.modValue = rng.nextFloat();
             st.accent = false;
             if (rng.nextFloat() > 0.85f) st.noteOffset = (rng.nextBool() ? 12 : -12);
             if (st.active && (i % 4) == 0) { st.accent = true; st.velocity = juce::jmax (st.velocity, 0.9f); }
@@ -257,6 +291,7 @@ private:
         {
             auto& st = sequencer.getStep (i);
             st.active = true; st.velocity = 0.85f; st.gate = 0.6f;
+            st.modValue = (float) i / (float) juce::jmax (1, salek::StepSequencer::NumSteps - 1);
         }
         repaint();
     }

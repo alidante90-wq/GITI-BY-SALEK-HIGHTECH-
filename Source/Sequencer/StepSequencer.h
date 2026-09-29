@@ -68,7 +68,7 @@ public:
 
     void process (int numSamples, juce::MidiBuffer& outMidi)
     {
-        if (! enabled || ! hasRoot)
+        if (! enabled)
         {
             if (pendingNoteOff >= 0)
             {
@@ -108,7 +108,7 @@ public:
                 auto& st = steps[static_cast<size_t> (currentStep)];
                 currentMod = st.modValue;
 
-                if (st.active && juce::Random::getSystemRandom().nextFloat() <= st.probability)
+                if (hasRoot && st.active && juce::Random::getSystemRandom().nextFloat() <= st.probability)
                 {
                     int note = juce::jlimit (0, 127, rootNote + st.noteOffset);
                     float vel = juce::jlimit (0.0f, 1.0f, st.accent ? juce::jmin (1.0f, st.velocity * 1.35f) : st.velocity);
@@ -133,9 +133,10 @@ public:
             steps[static_cast<size_t>(i)].accent = false;
             steps[static_cast<size_t>(i)].gate = 0.7f;
             steps[static_cast<size_t>(i)].probability = 1.0f;
-            steps[static_cast<size_t>(i)].modValue = 0.0f;
+            steps[static_cast<size_t>(i)].modValue = (float) i / (float) juce::jmax (1, NumSteps - 1);
         }
         currentStep = 0;
+        currentMod = steps[0].modValue;
         samplesUntilNext = 0.0;
         currentNote = -1;
         pendingNoteOff = -1;

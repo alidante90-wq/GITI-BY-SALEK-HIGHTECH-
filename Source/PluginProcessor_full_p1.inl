@@ -77,6 +77,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SalekHightechAudioProcessor:
     F("master_drive","Master Drive",0,1,0); F("master_gain","Master Gain",0,1,0.8f);
     B("arp_on","Arp On",false); I("arp_rate","Arp Rate",1,16,4); I("arp_octaves","Arp Oct",1,4,1); F("arp_gate","Arp Gate",0.05f,1.0f,0.72f); F("arp_swing","Arp Swing",0.0f,0.75f,0.0f);
     B("seq_on","Seq On",false); I("seq_rate","Seq Rate",1,8,4); I("seq_length","Seq Length",1,16,16); F("seq_swing","Seq Swing",0.0f,0.75f,0.0f); F("seq_gate","Seq Gate",0.05f,1.0f,1.0f);
+    C("seq_magic_target","SEQ to Magic",{"Off","X","Y","X+Y"},0); F("seq_magic_depth","SEQ Magic Depth",0.0f,1.0f,0.65f);
     F("comp_threshold","Comp Thresh",-40,0,-12); F("comp_ratio","Comp Ratio",1,20,4); F("comp_mix","Comp Mix",0,1,0.55f); F("comp_gain","Comp Gain",-12,24,0);
     F("comp_depth","Comp Depth",0,1,0.55f); F("comp_attack","Comp Attack",0.5f,50,8); F("comp_release","Comp Release",10,300,80);
     F("comp_thr_lo","Comp Thr LO",-60,0,-18); F("comp_thr_mid","Comp Thr MID",-60,0,-12); F("comp_thr_hi","Comp Thr HI",-60,0,-8);

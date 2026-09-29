@@ -12,6 +12,9 @@ public:
     void prepare(double sampleRate)
     {
         sr = sampleRate > 0 ? sampleRate : 44100.0;
+        smoothCoeff = 1.0f - std::exp (-1.0f / (0.006f * static_cast<float> (sr)));
+        tablePos = tablePosTarget; warp = warpTarget; fold = foldTarget;
+        drive = driveTarget; level = levelTarget;
         updatePhaseInc();
     }
 
@@ -19,17 +22,23 @@ public:
 
     void setFrequency(float hz) noexcept { frequency = juce::jmax(0.f, hz); updatePhaseInc(); }
     void setWavetable(const Wavetable* wt) noexcept { wavetable = wt; }
-    void setTablePosition(float pos) noexcept { tablePos = juce::jlimit(0.f, 1.f, pos); }
-    void setLevel(float lvl) noexcept { level = juce::jlimit(0.f, 1.f, lvl); }
+    void setTablePosition(float pos) noexcept { tablePosTarget = juce::jlimit(0.f, 1.f, pos); }
+    void setLevel(float lvl) noexcept { levelTarget = juce::jlimit(0.f, 1.f, lvl); }
     void setPhaseOffset(float o) noexcept { phaseOffset = juce::jlimit(0.f, 1.f, o); }
     void setDetuneCents(float c) noexcept { detuneCents = c; updatePhaseInc(); }
-    void setWarp(float w) noexcept { warp = juce::jlimit(0.f, 1.f, w); }
-    void setFold(float f) noexcept { fold = juce::jlimit(0.f, 1.f, f); }
-    void setDrive(float d) noexcept { drive = juce::jlimit(0.f, 1.f, d); }
+    void setWarp(float w) noexcept { warpTarget = juce::jlimit(0.f, 1.f, w); }
+    void setFold(float f) noexcept { foldTarget = juce::jlimit(0.f, 1.f, f); }
+    void setDrive(float d) noexcept { driveTarget = juce::jlimit(0.f, 1.f, d); }
 
     float processSample(float pm = 0.f, float am = 1.f) noexcept
     {
         if (wavetable == nullptr) return 0.0f;
+
+        tablePos += smoothCoeff * (tablePosTarget - tablePos);
+        warp += smoothCoeff * (warpTarget - warp);
+        fold += smoothCoeff * (foldTarget - fold);
+        drive += smoothCoeff * (driveTarget - drive);
+        level += smoothCoeff * (levelTarget - level);
 
         const float nonLinear = juce::jmax (fold, drive);
         // Nonlinear synthesis is where alias energy is created. Average 2/4
@@ -55,7 +64,10 @@ public:
         dcState += 0.001f * (sample - dcState);
         sample -= dcState;
 
-        const float aaFc = shae::antiAliasCutoff (frequency, static_cast<float> (sr), nonLinear > 0.01f);
+        // Morph frames contain bright/folded partials too, even when the
+        // explicit fold/drive controls are off. Filter them before Nyquist.
+        const float aaFc = shae::antiAliasCutoff (frequency, static_cast<float> (sr),
+                                                   nonLinear > 0.01f || tablePos > 0.04f);
         sample = shae::onePoleLowpass (sample, aaState, aaFc, static_cast<float> (sr));
 
         return shae::safeSample (sample * level * am, 0.995f);
@@ -129,5 +141,7 @@ private:
     double sr = 44100.0, phase = 0.0, phaseInc = 0.0, analogPhase = 0.0;
     float frequency = 440.f, tablePos = 0.f, level = 1.f, phaseOffset = 0.f, detuneCents = 0.f;
     float warp = 0.f, fold = 0.f, drive = 0.f, dcState = 0.f, aaState = 0.f;
+    float tablePosTarget = 0.f, warpTarget = 0.f, foldTarget = 0.f, driveTarget = 0.f, levelTarget = 1.f;
+    float smoothCoeff = 1.f;
 };
 } // namespace salek

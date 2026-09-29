@@ -112,6 +112,36 @@ inline std::vector<Preset> makePresets()
             if (categoryIndex == 6) { v["fm_2to1"] = r (0.35f, 0.92f); v["fm_3to1"] = r (0.12f, 0.65f); }
             if (categoryIndex == 7) { v["dist_mix"] = r (0.25f, 0.72f); v["phaser_mix"] = r (0.18f, 0.65f); }
             if (categoryIndex == 8) { v["amp_attack"] = r (0.001f, 0.008f); v["amp_sustain"] = r (0.0f, 0.18f); v["amp_decay"] = r (0.12f, 0.4f); }
+
+            // Keep the factory bank immediately playable and clean at default
+            // host levels. The original wide random ranges stacked loud unison,
+            // high table frames, fold/FM, compression and distortion together.
+            auto cap = [&] (const char* key, float maximum)
+            {
+                auto it = v.find (key);
+                if (it != v.end()) it->second = juce::jmin (it->second, maximum);
+            };
+            cap ("osc1_table", 0.18f); cap ("osc2_table", 0.18f); cap ("osc3_table", 0.18f);
+            cap ("osc1_warp", 0.22f); cap ("osc2_warp", 0.22f); cap ("osc3_warp", 0.22f);
+            cap ("osc1_fold", 0.12f); cap ("osc2_fold", 0.12f); cap ("osc3_fold", 0.12f);
+            cap ("osc1_drive", 0.12f); cap ("osc2_drive", 0.12f); cap ("osc3_drive", 0.12f);
+            cap ("osc1_unison", 3.f); cap ("osc2_unison", 2.f); cap ("osc3_unison", 2.f);
+            cap ("osc1_udet", 8.f); cap ("osc2_udet", 6.f); cap ("osc3_udet", 4.f);
+            cap ("osc1_rand", 0.08f); cap ("osc2_rand", 0.08f); cap ("osc3_rand", 0.08f);
+            cap ("fm_2to1", 0.24f); cap ("fm_3to1", 0.18f); cap ("fm_3to2", 0.16f);
+            cap ("pm_2to1", 0.2f); cap ("am_2to1", 0.2f); cap ("rm_2to1", 0.16f);
+            cap ("filter_reso", 0.42f); cap ("filter_drive", 0.15f);
+            cap ("lfo_amount", 0.3f); cap ("lfo2_amount", 0.25f); cap ("lfo3_amount", 0.2f);
+            cap ("delay_mix", 0.3f); cap ("chorus_mix", 0.3f); cap ("reverb_mix", 0.35f);
+            cap ("dist_mix", 0.06f); cap ("dist_drive", 0.2f); cap ("dist_crush", 0.0f);
+            cap ("master_drive", 0.08f); cap ("master_gain", 0.74f);
+            cap ("comp_mix", 0.35f); cap ("comp_ratio", 3.5f);
+            if (auto it = v.find ("amp_attack"); it != v.end())
+                it->second = juce::jmax (it->second, 0.006f);
+            // Presets should not start a sequencer/arp against an empty step
+            // pattern. These remain available as explicit performance controls.
+            v["seq_on"] = 0.f;
+            v["arp_on"] = 0.f;
             result.push_back ({ displayName, std::move (v) });
         }
     }

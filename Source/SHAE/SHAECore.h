@@ -31,7 +31,9 @@ inline float antiAliasCutoff (float frequencyHz, float sampleRate, bool nonlinea
 {
     const float ny = sampleRate * 0.5f;
     if (!nonlinear && frequencyHz < ny * 0.12f) return ny * 0.98f;
-    const float headroom = nonlinear ? 0.58f : 0.78f;
+    // Rich table frames and nonlinear stages must leave room for upper
+    // harmonics; the former coefficient was less conservative when enabled.
+    const float headroom = nonlinear ? 1.35f : 0.78f;
     return juce::jlimit (1000.0f, ny * 0.96f,
                          ny - frequencyHz * headroom);
 }

@@ -599,6 +599,8 @@ void SalekHightechAudioProcessorEditor::resized()
         auto toggles = top.removeFromLeft (120);
         arpOn.setBounds (toggles.removeFromTop (36).reduced (2));
         seqOn.setBounds (toggles.removeFromTop (36).reduced (2));
+        seqMagicTargetBox.setBounds (toggles.reduced (2, 1));
+        seqMagicTargetBox.setTooltip ("Choose whether the running step sequence moves Magic X, Y, or both.");
         auto placeSeqKnob = [this] (juce::Rectangle<int> cell, const char* id)
         {
             for (auto& owned : knobs)
@@ -615,9 +617,9 @@ void SalekHightechAudioProcessorEditor::resized()
                 }
         };
         auto controls = top.reduced (4, 1);
-        const int controlWidth = controls.getWidth() / 4;
-        const char* seqIds[] = { "seq_rate", "seq_length", "seq_swing", "seq_gate" };
-        for (int i = 0; i < 4; ++i)
+        const int controlWidth = controls.getWidth() / 5;
+        const char* seqIds[] = { "seq_rate", "seq_length", "seq_swing", "seq_gate", "seq_magic_depth" };
+        for (int i = 0; i < 5; ++i)
         {
             placeSeqKnob ({ controls.getX() + i * controlWidth, controls.getY(), controlWidth, controls.getHeight() }, seqIds[i]);
         }

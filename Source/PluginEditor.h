@@ -285,6 +285,7 @@ private:
     juce::ComboBox presetFilterBox;
     juce::ComboBox filterMode, lfoWave;
     juce::ComboBox filterRouteBox, voiceModeBox;
+    juce::ComboBox seqMagicTargetBox;
     juce::ComboBox distModeBox, reverbModeBox, delayModeBox;
     juce::ToggleButton arpOn { "ARP ON" }, seqOn { "SEQ ON" };
     juce::TextButton prevPreset { "<" }, nextPreset { ">" }, initBtn { "INIT" }, savePresetBtn { "SAVE" }, loadPresetBtn { "LOAD" }, bankBtn { "BANK" };

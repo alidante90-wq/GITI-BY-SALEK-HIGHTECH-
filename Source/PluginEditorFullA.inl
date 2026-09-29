@@ -500,6 +500,8 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
         seqMagicOff.setColour (juce::TextButton::textColourOffId, juce::Colour (0xffff2d9b));
         seqTab.addAndMakeVisible (seqMagicOff);
         seqMagicOff.onClick = [this] {
+            if (auto* pt = processor.getAPVTS().getParameter ("seq_magic_target"))
+            { pt->beginChangeGesture(); pt->setValueNotifyingHost (pt->convertTo0to1 (0.f)); pt->endChangeGesture(); }
             if (auto* pa = processor.getAPVTS().getParameter ("magic_on"))
             { pa->beginChangeGesture(); pa->setValueNotifyingHost (0.f); pa->endChangeGesture(); }
             processor.getMagic().setActive (false);
@@ -535,6 +537,8 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
         addKnob (seqTab, "seq_length", "SEQ STEPS", C);
         addKnob (seqTab, "seq_swing", "SEQ SWING", M);
         addKnob (seqTab, "seq_gate", "SEQ GATE", O);
+        addKnob (seqTab, "seq_magic_depth", "XY DEPTH", C);
+        addCombo (seqTab, seqMagicTargetBox, "seq_magic_target", { "Off", "X", "Y", "X+Y" });
         // Extra voice colour — registered last so indices of FX/MOD stay stable
         addKnob (envTab, "glide", "GLIDE", C);
         addKnob (envTab, "poly_voices", "VOICES", M);

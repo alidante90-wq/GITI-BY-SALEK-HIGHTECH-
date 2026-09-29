@@ -142,9 +142,21 @@ void SalekHightechAudioProcessor::applyParamsToEngine()
     {
         float mx = juce::jlimit (0.f, 1.f, g("magic_x") + modMatrix.getModulation (salek::ModMatrix::Dest::MagicX) * 0.5f);
         float my = juce::jlimit (0.f, 1.f, g("magic_y") + modMatrix.getModulation (salek::ModMatrix::Dest::MagicY) * 0.5f);
+        const bool seqMotion = g ("seq_on") > 0.5f && g ("seq_magic_target") > 0.5f;
+        if (seqMotion)
+        {
+            const float step = stepSequencer.getCurrentMod();
+            const float bipolar = step * 2.0f - 1.0f;
+            const float depth = g ("seq_magic_depth");
+            const int target = (int) g ("seq_magic_target");
+            if (target == 1 || target == 3) mx += bipolar * depth;
+            if (target == 2 || target == 3) my += bipolar * depth;
+        }
         magic.setXY (mx, my);
+        // A selected SEQ→Magic lane is a performance source: it can animate
+        // the held effect without needing a MIDI note to start the sequencer.
+        magic.setActive (g ("magic_on") > 0.5f || seqMotion);
     }
-    magic.setActive (g("magic_on") > 0.5f);
 }
 
 void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
@@ -287,56 +299,17 @@ void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     float gain = apvts.getRawParameterValue("master_gain")->load();
     const float drive = apvts.getRawParameterValue("master_drive")->load();
-    const float gMul = gain * (0.85f + drive * 0.1f);
-    // Soft-clip master (clean loudness, no digital harshness)
+    // Default is a transparent gain stage. Master Drive adds one intentional
+    // normalized saturator; the SHAE safety limiter remains the final ceiling.
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
     {
         auto* d = buffer.getWritePointer (ch);
         for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            float x = d[i] * gMul;
-            // Modern soft clip — smooth, less digital edge
-            x = std::tanh (x * (0.88f + drive * 0.5f));
-            // gentle ceiling
-            const float ax = std::abs (x);
-            if (ax > 0.85f)
-                x = std::copysign (0.85f + 0.13f * std::tanh ((ax - 0.85f) * 5.f), x);
-            d[i] = juce::jlimit (-0.97f, 0.97f, x);
-        }
-    }
-
-    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-    {
-        auto* d = buffer.getWritePointer (ch);
-        const int n = buffer.getNumSamples();
-        for (int i = 0; i < n; ++i)
-        {
-            float x = d[i];
-            x = std::tanh (x * 1.05f);
-            const float ax = std::abs (x);
-            if (ax > 0.88f)
-            {
-                const float s = (x >= 0.0f) ? 1.0f : -1.0f;
-                x = s * (0.88f + 0.12f * std::tanh ((ax - 0.88f) * 6.0f));
-            }
+            float x = d[i] * gain;
+            if (drive > 1.0e-4f)
+                x = shae::softClip (x, 1.0f + drive * 4.0f);
             d[i] = x;
-        }
-    }
-
-    {
-        static float hpL = 0.f, hpR = 0.f;
-        const float coeff = 0.08f;
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
-        {
-            float L = buffer.getSample (0, i);
-            float R = buffer.getNumChannels() > 1 ? buffer.getSample (1, i) : L;
-            hpL += coeff * ((L - hpL));
-            hpR += coeff * ((R - hpR));
-            float airL = (L - hpL) * 0.18f;
-            float airR = (R - hpR) * 0.18f;
-            buffer.setSample (0, i, L + airL);
-            if (buffer.getNumChannels() > 1)
-                buffer.setSample (1, i, R + airR);
         }
     }
 

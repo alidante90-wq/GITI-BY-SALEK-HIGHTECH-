@@ -87,9 +87,9 @@ void SalekHightechAudioProcessorEditor::resized()
     {
         auto r = modTab.getLocalBounds().reduced (4);
         if (lfoDisplay != nullptr)
-            lfoDisplay->setBounds (r.removeFromTop (70).reduced (2));
+            lfoDisplay->setBounds (r.removeFromTop (58).reduced (2));
         if (matrixPanel != nullptr)
-            matrixPanel->setBounds (r.removeFromLeft (260).reduced (2));
+            matrixPanel->setBounds (r.removeFromTop (juce::jmin (290, r.getHeight() / 2)).reduced (2));
         int x = r.getX(), y = r.getY(), w = 88, h = 95;
         for (int i = 25; i < juce::jmin (37, (int) knobs.size()); ++i)
         {
