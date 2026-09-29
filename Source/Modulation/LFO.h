@@ -29,10 +29,10 @@ public:
     static const char* shapeName (int preset) noexcept
     {
         static const char* names[32] = {
-            "SIN","TRI","SAW","SAW-","SQR","PLS25","PLS12","EXP+",
-            "EXP-","LOG","BELL","WOB","STEP","GATE","S-CRV","SPIKE",
-            "SIN3","AM","RECT","TENT","SOFT","LATE","HALF","DWOB",
-            "3STP","HARM","FOLD","COS2","BLIP","SAT","PTRN","FM"
+            "Sine","Triangle","Saw Up","Saw Down","Square","Pulse 25","Pulse 12","Exp Rise",
+            "Exp Fall","Log Rise","Bell","Wobble","3-Step","Gate Sweep","Soft Curve","Spike Train",
+            "Sine x3","AM Sine","Rectified","Tent","Soft Sine","Late Ramp","Half Ramp","Dying Wobble",
+            "3-State","Harmonic","Folded Saw","Cosine x2","Blip","Saturated","Pattern","FM Curve"
         };
         return names[((preset % 32) + 32) % 32];
     }

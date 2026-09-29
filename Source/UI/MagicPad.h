@@ -219,6 +219,7 @@ public:
 
     void timerCallback() override
     {
+        if (! isShowing()) return;
         anim += 0.045f;
         repaint();
     }

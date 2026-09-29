@@ -156,51 +156,58 @@ void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     applyParamsToEngine();
     keyboardState.processNextMidiBuffer (midi, 0, buffer.getNumSamples(), true);
 
-    juce::MidiBuffer routed;
-    routed.addEvents (midi, 0, buffer.getNumSamples(), 0);
-
     const bool seqOn = apvts.getRawParameterValue("seq_on")->load() > 0.5f;
     const bool arpOn = apvts.getRawParameterValue("arp_on")->load() > 0.5f;
     stepSequencer.setEnabled (seqOn);
     arpeggiator.setEnabled (arpOn);
 
-    if (seqOn)
+    // Leave MIDI untouched on the common path when both generators are off;
+    // copying it into temporary buffers every audio block caused avoidable
+    // allocator and event-copy work during ordinary synth playback.
+    if (seqOn || arpOn)
     {
-        stepSequencer.setRateDivisor ((int) apvts.getRawParameterValue("seq_rate")->load());
-        stepSequencer.setPatternLength ((int) apvts.getRawParameterValue("seq_length")->load());
-        stepSequencer.setSwing (apvts.getRawParameterValue("seq_swing")->load());
-        stepSequencer.setGate (apvts.getRawParameterValue("seq_gate")->load());
-        for (const auto metadata : midi)
+        juce::MidiBuffer routed;
+        routed.addEvents (midi, 0, buffer.getNumSamples(), 0);
+
+        if (seqOn)
         {
-            const auto msg = metadata.getMessage();
-            if (msg.isNoteOn()) stepSequencer.setRootNote (msg.getNoteNumber());
+            stepSequencer.setRateDivisor ((int) apvts.getRawParameterValue("seq_rate")->load());
+            stepSequencer.setPatternLength ((int) apvts.getRawParameterValue("seq_length")->load());
+            stepSequencer.setSwing (apvts.getRawParameterValue("seq_swing")->load());
+            stepSequencer.setGate (apvts.getRawParameterValue("seq_gate")->load());
+            for (const auto metadata : midi)
+            {
+                const auto msg = metadata.getMessage();
+                if (msg.isNoteOn()) stepSequencer.setRootNote (msg.getNoteNumber());
+            }
+            stepSequencer.process(buffer.getNumSamples(), routed);
         }
-        stepSequencer.process(buffer.getNumSamples(), routed);
+
+        if (arpOn)
+        {
+            arpeggiator.setRateDivisor ((int) apvts.getRawParameterValue("arp_rate")->load());
+            arpeggiator.setOctaves ((int) apvts.getRawParameterValue("arp_octaves")->load());
+            arpeggiator.setGate (apvts.getRawParameterValue("arp_gate")->load());
+            arpeggiator.setSwing (apvts.getRawParameterValue("arp_swing")->load());
+            juce::MidiBuffer arpIn;
+            for (const auto metadata : routed)
+            {
+                const auto msg = metadata.getMessage();
+                if (msg.isNoteOn())
+                    arpeggiator.noteOn (msg.getNoteNumber(), msg.getFloatVelocity());
+                else if (msg.isNoteOff())
+                    arpeggiator.noteOff (msg.getNoteNumber());
+                else
+                    arpIn.addEvent (msg, metadata.samplePosition);
+            }
+            routed.clear();
+            routed.addEvents (arpIn, 0, buffer.getNumSamples(), 0);
+            arpeggiator.process (buffer.getNumSamples(), routed);
+        }
+
+        midi.swapWith (routed);
     }
 
-    if (arpOn)
-    {
-        arpeggiator.setRateDivisor ((int) apvts.getRawParameterValue("arp_rate")->load());
-        arpeggiator.setOctaves ((int) apvts.getRawParameterValue("arp_octaves")->load());
-        arpeggiator.setGate (apvts.getRawParameterValue("arp_gate")->load());
-        arpeggiator.setSwing (apvts.getRawParameterValue("arp_swing")->load());
-        juce::MidiBuffer arpIn;
-        for (const auto metadata : routed)
-        {
-            const auto msg = metadata.getMessage();
-            if (msg.isNoteOn())
-                arpeggiator.noteOn (msg.getNoteNumber(), msg.getFloatVelocity());
-            else if (msg.isNoteOff())
-                arpeggiator.noteOff (msg.getNoteNumber());
-            else
-                arpIn.addEvent (msg, metadata.samplePosition);
-        }
-        routed.clear();
-        routed.addEvents (arpIn, 0, buffer.getNumSamples(), 0);
-        arpeggiator.process (buffer.getNumSamples(), routed);
-    }
-
-    midi.swapWith (routed);
     synthEngine.processBlock(buffer, midi);
 
     auto bypassed = [&](const char* id) -> bool {

@@ -62,6 +62,9 @@ jobs:
           Write-Host "EXE:  $($exe.FullName)"
           if ($vst3) { Copy-Item -Recurse $vst3.FullName "package\GITI BY SALEK HIGHTECH.vst3" }
           if ($exe)  { Copy-Item $exe.FullName "package\GITI BY SALEK HIGHTECH.exe" }
+          if (Test-Path "Source/Assets") {
+            Copy-Item -Recurse "Source/Assets" "package/Assets"
+          }
           if (-not (Get-ChildItem package -ErrorAction SilentlyContinue)) {
             Write-Error "No artifacts found"
             Get-ChildItem -Path build-v2 -Recurse -Include *.exe,*.vst3,*.dll | Select-Object FullName

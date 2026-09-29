@@ -2,6 +2,8 @@
 #include <JuceHeader.h>
 #include "SynthVoice.h"
 #include "SynthSound.h"
+#include <array>
+#include <limits>
 
 namespace salek
 {
@@ -56,13 +58,30 @@ public:
 private:
     static constexpr int maxVoices = 16;
     juce::Synthesiser synth;
+    // Most synth controls stay fixed for many audio blocks. Avoid pushing the
+    // same values through every voice at every block boundary.
+    std::array<float, 64> lastFloatParameters;
+    std::array<int, 24> lastIntParameters;
+
+    bool updateIfChanged (std::array<float, 64>& values, size_t index, float value) noexcept
+    {
+        if (values[index] == value) return false;
+        values[index] = value;
+        return true;
+    }
+    bool updateIfChanged (std::array<int, 24>& values, size_t index, int value) noexcept
+    {
+        if (values[index] == value) return false;
+        values[index] = value;
+        return true;
+    }
 
     template <typename Fn>
     void forEachVoice (Fn&& fn)
     {
         for (int i = 0; i < synth.getNumVoices(); ++i)
-            if (auto* v = dynamic_cast<SynthVoice*> (synth.getVoice (i)))
-                fn (*v);
+            // SynthEngine exclusively installs SynthVoice instances above.
+            fn (static_cast<SynthVoice&> (*synth.getVoice (i)));
     }
 };
 

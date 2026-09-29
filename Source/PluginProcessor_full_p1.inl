@@ -140,6 +140,19 @@ juce::StringArray SalekHightechAudioProcessor::getPresetNames() const
 {
     juce::StringArray n; for (auto& pr : factoryPresets) n.add(pr.name); return n;
 }
+juce::String SalekHightechAudioProcessor::getProgramDescription (int index) const
+{
+    if (index < 0 || index >= static_cast<int> (factoryPresets.size())) return {};
+    const auto& name = factoryPresets[static_cast<size_t> (index)].name;
+    for (const auto& identity : salek::giti::identities)
+    {
+        if (name.contains (juce::String ("GITI ") + identity.number + "/"))
+            return juce::String (identity.name) + " · " + identity.branch + "\nVoice: " + identity.voice
+                 + "\nPower: " + identity.power
+                 + (juce::String (identity.special).isNotEmpty() ? "\n" + juce::String (identity.special) : juce::String());
+    }
+    return name;
+}
 void SalekHightechAudioProcessor::setCurrentProgram(int index) { loadFactoryPreset(index); }
 const juce::String SalekHightechAudioProcessor::getProgramName(int index)
 {

@@ -148,9 +148,9 @@ void SalekHightechAudioProcessorEditor::resized()
     inspireBtn.setBounds (header.removeFromRight (56).reduced (2, 10));
     // Big logo dead-center of header strip (above tabs / osc monitors)
     {
-        const int lw = juce::jmin (820, juce::jmax (440, header.getWidth() * 3 / 5));
-        const int lh = header.getHeight() - 2;
-        logoOverlay.setBounds (header.getCentreX() - lw / 2, header.getY(), lw, lh);
+        const int lw = juce::jmin (900, juce::jmax (500, header.getWidth() * 7 / 10));
+        const int lh = header.getHeight() + 10;
+        logoOverlay.setBounds (header.getCentreX() - lw / 2, header.getY() - 5, lw, lh);
         logoOverlay.toFront (false);
         logoOverlay.setVisible (true);
     }
@@ -616,14 +616,10 @@ void SalekHightechAudioProcessorEditor::resized()
         };
         auto controls = top.reduced (4, 1);
         const int controlWidth = controls.getWidth() / 4;
-        const char* arpIds[] = { "arp_rate", "arp_octaves", "arp_gate", "arp_swing" };
         const char* seqIds[] = { "seq_rate", "seq_length", "seq_swing", "seq_gate" };
-        auto arpRow = controls.removeFromTop (controls.getHeight() / 2);
-        auto seqRow = controls;
         for (int i = 0; i < 4; ++i)
         {
-            placeSeqKnob ({ arpRow.getX() + i * controlWidth, arpRow.getY(), controlWidth, arpRow.getHeight() }, arpIds[i]);
-            placeSeqKnob ({ seqRow.getX() + i * controlWidth, seqRow.getY(), controlWidth, seqRow.getHeight() }, seqIds[i]);
+            placeSeqKnob ({ controls.getX() + i * controlWidth, controls.getY(), controlWidth, controls.getHeight() }, seqIds[i]);
         }
         // 2 rows of Magic trigger buttons under seq strip
         {

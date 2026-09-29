@@ -58,6 +58,7 @@ public:
     }
     void pitchWheelMoved(int) override {}
     void controllerMoved(int, int) override {}
+    static const Wavetable& getSharedWavetable() noexcept { return sharedWavetable; }
     void renderNextBlock(juce::AudioBuffer<float>& out, int start, int num) override;
 
     void setOsc1TablePos(float v){osc1.setTablePosition(v); for(int u=0;u<maxUnison;++u)uniOsc1[u].setTablePosition(v);}
@@ -130,7 +131,7 @@ private:
     int uniVoices1=1, uniVoices2=1, uniVoices3=1;
     float uniDet1=12.f, uniDet2=12.f, uniDet3=12.f;
     float uniSpr1=0.7f, uniSpr2=0.7f, uniSpr3=0.7f;
-    Wavetable sharedWavetable;
+    inline static Wavetable sharedWavetable;
     StateVariableFilter filterL, filterR;
     LFO lfo;
     SmoothedValue cutoffSmoother;

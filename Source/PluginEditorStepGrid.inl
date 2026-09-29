@@ -204,7 +204,7 @@ public:
         repaint();
     }
 
-    void timerCallback() override { repaint(); }
+    void timerCallback() override { if (isShowing()) repaint(); }
 
 private:
     salek::StepSequencer& sequencer;

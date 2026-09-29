@@ -99,6 +99,7 @@ void SalekHightechAudioProcessorEditor::listBoxItemClicked (int row, const juce:
     if (pr.programIndex < 0) return;
     processor.setCurrentProgram (pr.programIndex);
     presetLabel.setText (processor.getProgramName (pr.programIndex), juce::dontSendNotification);
+    presetLabel.setTooltip (processor.getProgramDescription (pr.programIndex));
 }
 
 #include "PluginEditorPaint.inl"

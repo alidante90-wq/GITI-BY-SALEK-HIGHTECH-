@@ -1,3 +1,5 @@
+#include "GITI/GitiPresetBank.h"
+
 void SalekHightechAudioProcessor::initFactoryPresets()
 {
     auto add = [&](const juce::String& n, std::map<juce::String,float> v){ factoryPresets.push_back({n, std::move(v)}); };
@@ -225,4 +227,6 @@ void SalekHightechAudioProcessor::initFactoryPresets()
         {"delay_mix",0.32f},{"reverb_mix",0.35f},{"chorus_mix",0.2f},{"master_drive",0.36f}
     });
 #include "PluginProcessorPresetsEngineered.inl"
+
+    for (auto& p : salek::giti::makePresets()) add (p.name, std::move (p.values));
 }

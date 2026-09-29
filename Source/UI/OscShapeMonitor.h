@@ -1,11 +1,17 @@
 #pragma once
 #include <JuceHeader.h>
+#include "../Synth/SynthVoice.h"
 
 /** Live mini wavetable-shape scope for one oscillator */
 class OscShapeMonitor : public juce::Component, private juce::Timer
 {
 public:
-    OscShapeMonitor() { startTimerHz (5); }
+    OscShapeMonitor() { }
+    void visibilityChanged() override
+    {
+        if (isShowing()) startTimerHz (25);
+        else stopTimer();
+    }
 
     void setAPVTS (juce::AudioProcessorValueTreeState* s) { apvts = s; }
     void setOscIndex (int i) { osc = juce::jlimit (0, 2, i); }
@@ -43,7 +49,7 @@ public:
         }
         g.drawHorizontalLine ((int) plot.getCentreY(), plot.getX(), plot.getRight());
 
-        float table = 0.f, warp = 0.f, fold = 0.f;
+        float table = 0.f, warp = 0.f, fold = 0.f, drive = 0.f;
         if (apvts != nullptr)
         {
             auto gval = [&] (const char* id, float d) {
@@ -53,9 +59,11 @@ public:
             const char* tid[] = { "osc1_table", "osc2_table", "osc3_table" };
             const char* wid[] = { "osc1_warp", "osc2_warp", "osc3_warp" };
             const char* fid[] = { "osc1_fold", "osc2_fold", "osc3_fold" };
+            const char* did[] = { "osc1_drive", "osc2_drive", "osc3_drive" };
             table = gval (tid[osc], 0.f);
             warp  = gval (wid[osc], 0.f);
             fold  = gval (fid[osc], 0.f);
+            drive = gval (did[osc], 0.f);
         }
 
         juce::Path wave, fill;
@@ -63,11 +71,37 @@ public:
         for (int i = 0; i < N; ++i)
         {
             float t = (float) i / (float) (N - 1);
-            float harm = 1.f + table * 5.f;
-            float tw = t + warp * 0.38f * std::sin (t * juce::MathConstants<float>::twoPi);
-            float y = std::sin (tw * juce::MathConstants<float>::twoPi * harm);
-            if (fold > 0.01f)
-                y = std::sin (y * juce::MathConstants<float>::pi * (1.f + fold * 2.2f));
+            // Draw samples from the same SHAE wavetable the oscillator reads.
+            float phase = t;
+            if (warp > 1.0e-4f)
+            {
+                const float amount = 1.0f + warp * 3.4f;
+                phase = std::pow (juce::jmax (1.0e-6f, phase), amount);
+                if (warp > 0.42f)
+                {
+                    const float mirrorAmt = juce::jlimit (0.f, 1.f, (warp - 0.42f) * 1.4f);
+                    if (phase > 0.5f) phase = 0.5f + (phase - 0.5f) * (1.f - mirrorAmt * 0.55f);
+                    if (warp > 0.75f) phase = std::fmod (phase * (1.f + (warp - 0.75f) * 3.2f), 1.f);
+                }
+                phase = juce::jlimit (0.f, 0.99999f, phase);
+            }
+            float y = salek::SynthVoice::getSharedWavetable().getSample (table, phase);
+            if (fold > 1.0e-4f)
+            {
+                const float f = fold * fold;
+                const float x = y * (1.f + f * 7.5f);
+                float hard = x;
+                for (int k = 0; k < 3; ++k) { if (hard > 1.f) hard = 2.f - hard; else if (hard < -1.f) hard = -2.f - hard; else break; }
+                const float folded = std::sin (x * juce::MathConstants<float>::halfPi * (0.8f + f * 0.9f));
+                y = (folded * (1.f - f * 0.45f) + hard * (f * 0.45f)) / (1.f + f * 0.9f);
+            }
+            if (drive > 1.0e-4f)
+            {
+                const float gain = 1.f + drive * 5.8f;
+                float shaped = y * gain;
+                shaped = std::tanh (shaped * (1.f + drive * 0.28f)) - 0.07f * drive * shaped * shaped;
+                y = shaped / (0.88f + 0.12f * std::tanh (gain));
+            }
             y *= 0.88f;
             float px = plot.getX() + t * plot.getWidth();
             float py = plot.getCentreY() - y * plot.getHeight() * 0.44f;

@@ -22,18 +22,18 @@
         // Serum-inspired shape bank buttons
         struct ShapeBtn { juce::TextButton* b; const char* label; int preset; };
         ShapeBtn shapes[] = {
-            { &lfoPresetSine,  "SIN",  0 },
-            { &lfoPresetTri,   "TRI",  1 },
-            { &lfoPresetSaw,   "SAW",  2 },
-            { &lfoPresetSqr,   "SQR",  4 },
-            { &lfoPresetPulse, "PLS",  5 },
-            { &lfoPresetExp,   "EXP",  7 },
-            { &lfoPresetLog,   "LOG",  9 },
-            { &lfoPresetBell,  "BELL", 10 },
-            { &lfoPresetWob,   "WOB",  11 },
-            { &lfoPresetChaos, "CHAOS",12 },
-            { &lfoPresetGate,  "GATE", 13 },
-            { &lfoPresetCustom,"DRAW", -1 }
+            { &lfoPresetSine,  "Sine",       0 },
+            { &lfoPresetTri,   "Triangle",   1 },
+            { &lfoPresetSaw,   "Saw Up",     2 },
+            { &lfoPresetSqr,   "Square",     4 },
+            { &lfoPresetPulse, "Pulse",      5 },
+            { &lfoPresetExp,   "Exp Rise",   7 },
+            { &lfoPresetLog,   "Log Fall",   9 },
+            { &lfoPresetBell,  "Bell",      10 },
+            { &lfoPresetWob,   "Wobble",    11 },
+            { &lfoPresetChaos, "Chaos",     12 },
+            { &lfoPresetGate,  "Gate",      13 },
+            { &lfoPresetCustom,"Draw",      -1 }
         };
         for (auto& sh : shapes)
         {

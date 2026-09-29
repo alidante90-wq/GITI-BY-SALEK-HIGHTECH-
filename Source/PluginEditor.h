@@ -370,6 +370,7 @@ private:
     Knob& addKnob(juce::Component& parent, const char* id, const char* label, juce::Colour c);
     void assignModToParam (const juce::String& paramId, float amount = 0.5f);
     void tryAssignModAt (juce::Point<int> editorPos, float amount, const juce::ModifierKeys& mods);
+    juce::Point<int> currentMousePositionInEditor() const;
     void mouseUp (const juce::MouseEvent& e) override;
     void mouseDrag (const juce::MouseEvent& e) override;
     std::vector<std::unique_ptr<juce::MouseListener>> modHookListeners;

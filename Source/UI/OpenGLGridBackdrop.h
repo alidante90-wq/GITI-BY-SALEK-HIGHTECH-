@@ -142,6 +142,7 @@ public:
 
     void timerCallback() override
     {
+        if (! isShowing()) return;
         // Trigger one GL frame at low rate (not continuous)
         openGLContext.triggerRepaint();
     }

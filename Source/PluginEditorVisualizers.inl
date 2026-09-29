@@ -50,7 +50,7 @@ public:
             g.strokePath (p, juce::PathStrokeType (1.0f));
         }
     }
-    void timerCallback() override { phase += 0.12f; repaint(); }
+    void timerCallback() override { if (isShowing()) { phase += 0.12f; repaint(); } }
 private:
     VisualFifo* visualFifo = nullptr;
     float phase = 0.f;
@@ -95,7 +95,7 @@ public:
             g.fillRoundedRectangle (bar, 2.f);
         }
     }
-    void timerCallback() override { repaint(); }
+    void timerCallback() override { if (isShowing()) repaint(); }
 private:
     VisualFifo* visualFifo = nullptr;
     float smooth[16] = {};

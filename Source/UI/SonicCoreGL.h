@@ -35,7 +35,7 @@ public:
 
     void timerCallback()
     {
-        openGLContext.triggerRepaint();
+        if (isShowing()) openGLContext.triggerRepaint();
     }
 
     ~SonicCoreGL() override

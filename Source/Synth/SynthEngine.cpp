@@ -5,6 +5,8 @@ namespace salek
 
 SynthEngine::SynthEngine()
 {
+    lastFloatParameters.fill (std::numeric_limits<float>::quiet_NaN());
+    lastIntParameters.fill (std::numeric_limits<int>::min());
     for (int i = 0; i < maxVoices; ++i)
         synth.addVoice (new SynthVoice());
     synth.addSound (new SynthSound());
@@ -28,79 +30,112 @@ void SynthEngine::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuff
     synth.renderNextBlock (buffer, midi, 0, buffer.getNumSamples());
 }
 
-void SynthEngine::setOsc1TablePos (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1TablePos (v); }); }
-void SynthEngine::setOsc2TablePos (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2TablePos (v); }); }
-void SynthEngine::setOsc3TablePos (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3TablePos (v); }); }
-void SynthEngine::setOsc1Level (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Level (v); }); }
-void SynthEngine::setOsc1Pan (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Pan (v); }); }
-void SynthEngine::setOsc2Pan (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Pan (v); }); }
-void SynthEngine::setOsc3Pan (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Pan (v); }); }
-void SynthEngine::setOsc2Level (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Level (v); }); }
-void SynthEngine::setOsc3Level (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Level (v); }); }
-void SynthEngine::setOsc1Octave (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Octave (v); }); }
-void SynthEngine::setOsc2Octave (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Octave (v); }); }
-void SynthEngine::setOsc3Octave (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Octave (v); }); }
-void SynthEngine::setOsc1Semi (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Semi (v); }); }
-void SynthEngine::setOsc2Semi (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Semi (v); }); }
-void SynthEngine::setOsc3Semi (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Semi (v); }); }
-void SynthEngine::setOsc1CoarsePitch (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1CoarsePitch (v); }); }
-void SynthEngine::setOsc2CoarsePitch (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2CoarsePitch (v); }); }
-void SynthEngine::setOsc3CoarsePitch (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3CoarsePitch (v); }); }
-void SynthEngine::setOsc1Fine (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Fine (v); }); }
-void SynthEngine::setOsc2Fine (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Fine (v); }); }
-void SynthEngine::setOsc3Fine (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Fine (v); }); }
-void SynthEngine::setOsc1Detune (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Detune (v); }); }
-void SynthEngine::setOsc2Detune (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Detune (v); }); }
-void SynthEngine::setOsc3Detune (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Detune (v); }); }
-void SynthEngine::setOsc1Warp (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Warp (v); }); }
-void SynthEngine::setOsc2Warp (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Warp (v); }); }
-void SynthEngine::setOsc3Warp (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Warp (v); }); }
-void SynthEngine::setOsc1Fold (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Fold (v); }); }
-void SynthEngine::setOsc2Fold (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Fold (v); }); }
-void SynthEngine::setOsc3Fold (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Fold (v); }); }
-void SynthEngine::setOsc1Drive (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Drive (v); }); }
-void SynthEngine::setOsc2Drive (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Drive (v); }); }
-void SynthEngine::setOsc3Drive (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Drive (v); }); }
-void SynthEngine::setOsc1Phase (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Phase (v); }); }
-void SynthEngine::setOsc2Phase (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Phase (v); }); }
-void SynthEngine::setOsc3Phase (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Phase (v); }); }
-void SynthEngine::setOsc1Rand (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Rand (v); }); }
-void SynthEngine::setOsc2Rand (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Rand (v); }); }
-void SynthEngine::setOsc3Rand (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Rand (v); }); }
-void SynthEngine::setFm2to1 (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setFm2to1 (v); }); }
-void SynthEngine::setFm3to1 (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setFm3to1 (v); }); }
-void SynthEngine::setFm3to2 (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setFm3to2 (v); }); }
-void SynthEngine::setPm2to1 (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setPm2to1 (v); }); }
-void SynthEngine::setPm3to1 (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setPm3to1 (v); }); }
-void SynthEngine::setAm2to1 (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setAm2to1 (v); }); }
-void SynthEngine::setRm2to1 (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setRm2to1 (v); }); }
-void SynthEngine::setFilterCutoff (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setFilterBaseCutoff (v); }); }
-void SynthEngine::setFilterResonance (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setFilterResonance (v); }); }
-void SynthEngine::setFilterDrive (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setFilterDrive (v); }); }
-void SynthEngine::setFilterMode (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setFilterMode (v); }); }
-void SynthEngine::setFilterEnvAmt (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setFilterEnvAmt (v); }); }
-void SynthEngine::setNoiseLevel (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setNoiseLevel (v); }); }
-void SynthEngine::setSubLevel (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setSubLevel (v); }); }
-void SynthEngine::setFilterRoute (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setFilterRoute (v); }); }
-void SynthEngine::setGlide (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setGlide (v); }); }
-void SynthEngine::setAmpAttack (float v)  { forEachVoice ([&] (SynthVoice& voice) { voice.setAmpAttack (v); }); }
-void SynthEngine::setAmpDecay (float v)   { forEachVoice ([&] (SynthVoice& voice) { voice.setAmpDecay (v); }); }
-void SynthEngine::setAmpSustain (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setAmpSustain (v); }); }
-void SynthEngine::setAmpRelease (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setAmpRelease (v); }); }
-void SynthEngine::setLfoRate (float v)   { forEachVoice ([&] (SynthVoice& voice) { voice.setLfoRate (v); }); }
-void SynthEngine::setLfoAmount (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setLfoAmount (v); }); }
-void SynthEngine::setLfoWave (int v)     { forEachVoice ([&] (SynthVoice& voice) { voice.setLfoWave (v); }); }
+#define SALEK_CACHED_FLOAT(method, index, voiceMethod) \
+    void SynthEngine::method (float v) { \
+        if (! updateIfChanged (lastFloatParameters, index, v)) return; \
+        forEachVoice ([&] (SynthVoice& voice) { voice.voiceMethod (v); }); \
+    }
+#define SALEK_CACHED_INT(method, index, voiceMethod) \
+    void SynthEngine::method (int v) { \
+        if (! updateIfChanged (lastIntParameters, index, v)) return; \
+        forEachVoice ([&] (SynthVoice& voice) { voice.voiceMethod (v); }); \
+    }
+
+SALEK_CACHED_FLOAT (setOsc1TablePos, 0, setOsc1TablePos)
+SALEK_CACHED_FLOAT (setOsc2TablePos, 1, setOsc2TablePos)
+SALEK_CACHED_FLOAT (setOsc3TablePos, 2, setOsc3TablePos)
+SALEK_CACHED_FLOAT (setOsc1Level, 3, setOsc1Level)
+SALEK_CACHED_FLOAT (setOsc2Level, 4, setOsc2Level)
+SALEK_CACHED_FLOAT (setOsc3Level, 5, setOsc3Level)
+SALEK_CACHED_FLOAT (setOsc1Pan, 6, setOsc1Pan)
+SALEK_CACHED_FLOAT (setOsc2Pan, 7, setOsc2Pan)
+SALEK_CACHED_FLOAT (setOsc3Pan, 8, setOsc3Pan)
+SALEK_CACHED_INT (setOsc1Octave, 0, setOsc1Octave)
+SALEK_CACHED_INT (setOsc2Octave, 1, setOsc2Octave)
+SALEK_CACHED_INT (setOsc3Octave, 2, setOsc3Octave)
+SALEK_CACHED_INT (setOsc1Semi, 3, setOsc1Semi)
+SALEK_CACHED_INT (setOsc2Semi, 4, setOsc2Semi)
+SALEK_CACHED_INT (setOsc3Semi, 5, setOsc3Semi)
+SALEK_CACHED_INT (setOsc1CoarsePitch, 6, setOsc1CoarsePitch)
+SALEK_CACHED_INT (setOsc2CoarsePitch, 7, setOsc2CoarsePitch)
+SALEK_CACHED_INT (setOsc3CoarsePitch, 8, setOsc3CoarsePitch)
+SALEK_CACHED_FLOAT (setOsc1Fine, 9, setOsc1Fine)
+SALEK_CACHED_FLOAT (setOsc2Fine, 10, setOsc2Fine)
+SALEK_CACHED_FLOAT (setOsc3Fine, 11, setOsc3Fine)
+SALEK_CACHED_FLOAT (setOsc1Detune, 12, setOsc1Detune)
+SALEK_CACHED_FLOAT (setOsc2Detune, 13, setOsc2Detune)
+SALEK_CACHED_FLOAT (setOsc3Detune, 14, setOsc3Detune)
+SALEK_CACHED_FLOAT (setOsc1Warp, 15, setOsc1Warp)
+SALEK_CACHED_FLOAT (setOsc2Warp, 16, setOsc2Warp)
+SALEK_CACHED_FLOAT (setOsc3Warp, 17, setOsc3Warp)
+SALEK_CACHED_FLOAT (setOsc1Fold, 18, setOsc1Fold)
+SALEK_CACHED_FLOAT (setOsc2Fold, 19, setOsc2Fold)
+SALEK_CACHED_FLOAT (setOsc3Fold, 20, setOsc3Fold)
+SALEK_CACHED_FLOAT (setOsc1Drive, 21, setOsc1Drive)
+SALEK_CACHED_FLOAT (setOsc2Drive, 22, setOsc2Drive)
+SALEK_CACHED_FLOAT (setOsc3Drive, 23, setOsc3Drive)
+SALEK_CACHED_FLOAT (setOsc1Phase, 24, setOsc1Phase)
+SALEK_CACHED_FLOAT (setOsc2Phase, 25, setOsc2Phase)
+SALEK_CACHED_FLOAT (setOsc3Phase, 26, setOsc3Phase)
+SALEK_CACHED_FLOAT (setOsc1Rand, 27, setOsc1Rand)
+SALEK_CACHED_FLOAT (setOsc2Rand, 28, setOsc2Rand)
+SALEK_CACHED_FLOAT (setOsc3Rand, 29, setOsc3Rand)
+SALEK_CACHED_FLOAT (setFm2to1, 30, setFm2to1)
+SALEK_CACHED_FLOAT (setFm3to1, 31, setFm3to1)
+SALEK_CACHED_FLOAT (setFm3to2, 32, setFm3to2)
+SALEK_CACHED_FLOAT (setPm2to1, 33, setPm2to1)
+SALEK_CACHED_FLOAT (setPm3to1, 34, setPm3to1)
+SALEK_CACHED_FLOAT (setAm2to1, 35, setAm2to1)
+SALEK_CACHED_FLOAT (setRm2to1, 36, setRm2to1)
+SALEK_CACHED_FLOAT (setFilterCutoff, 37, setFilterBaseCutoff)
+SALEK_CACHED_FLOAT (setFilterResonance, 38, setFilterResonance)
+SALEK_CACHED_FLOAT (setFilterDrive, 39, setFilterDrive)
+SALEK_CACHED_INT (setFilterMode, 9, setFilterMode)
+SALEK_CACHED_FLOAT (setFilterEnvAmt, 40, setFilterEnvAmt)
+SALEK_CACHED_FLOAT (setNoiseLevel, 41, setNoiseLevel)
+SALEK_CACHED_FLOAT (setSubLevel, 42, setSubLevel)
+SALEK_CACHED_INT (setFilterRoute, 10, setFilterRoute)
+SALEK_CACHED_FLOAT (setGlide, 43, setGlide)
+SALEK_CACHED_FLOAT (setAmpAttack, 44, setAmpAttack)
+SALEK_CACHED_FLOAT (setAmpDecay, 45, setAmpDecay)
+SALEK_CACHED_FLOAT (setAmpSustain, 46, setAmpSustain)
+SALEK_CACHED_FLOAT (setAmpRelease, 47, setAmpRelease)
+SALEK_CACHED_FLOAT (setLfoRate, 48, setLfoRate)
+SALEK_CACHED_FLOAT (setLfoAmount, 49, setLfoAmount)
+SALEK_CACHED_INT (setLfoWave, 11, setLfoWave)
+SALEK_CACHED_INT (setUnison, 12, setUnison)
+SALEK_CACHED_FLOAT (setUnisonDetune, 50, setUnisonDetune)
+SALEK_CACHED_FLOAT (setUnisonSpread, 51, setUnisonSpread)
+SALEK_CACHED_INT (setScaleMode, 13, setScaleMode)
+SALEK_CACHED_FLOAT (setKoronCents, 52, setKoronCents)
+
 void SynthEngine::labRegenerate() { forEachVoice ([&] (SynthVoice& v) { v.labRegenerate(); }); }
 void SynthEngine::labProcessFrames (float fold, float drive) { forEachVoice ([&] (SynthVoice& v) { v.labProcessFrames (fold, drive); }); }
 void SynthEngine::labMorph (float t) { forEachVoice ([&] (SynthVoice& v) { v.labMorph (t); }); }
-void SynthEngine::setUnison (int v) { forEachVoice ([&] (SynthVoice& voice) { voice.setUnison (v); }); }
-void SynthEngine::setUnisonDetune (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setUnisonDetune (v); }); }
-void SynthEngine::setUnisonSpread (float v) { forEachVoice ([&] (SynthVoice& voice) { voice.setUnisonSpread (v); }); }
-void SynthEngine::setScaleMode (int m) { forEachVoice ([&] (SynthVoice& voice) { voice.setScaleMode (m); }); }
-void SynthEngine::setKoronCents (float c) { forEachVoice ([&] (SynthVoice& voice) { voice.setKoronCents (c); }); }
 
-void SynthEngine::setOsc1Unison (int v, float d, float s) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Unison (v, d, s); }); }
-void SynthEngine::setOsc2Unison (int v, float d, float s) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Unison (v, d, s); }); }
-void SynthEngine::setOsc3Unison (int v, float d, float s) { forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Unison (v, d, s); }); }
+void SynthEngine::setOsc1Unison (int v, float d, float s)
+{
+    const bool changed = updateIfChanged (lastIntParameters, 16, v)
+                      | updateIfChanged (lastFloatParameters, 53, d)
+                      | updateIfChanged (lastFloatParameters, 54, s);
+    if (changed) forEachVoice ([&] (SynthVoice& voice) { voice.setOsc1Unison (v, d, s); });
+}
+void SynthEngine::setOsc2Unison (int v, float d, float s)
+{
+    const bool changed = updateIfChanged (lastIntParameters, 17, v)
+                      | updateIfChanged (lastFloatParameters, 55, d)
+                      | updateIfChanged (lastFloatParameters, 56, s);
+    if (changed) forEachVoice ([&] (SynthVoice& voice) { voice.setOsc2Unison (v, d, s); });
+}
+void SynthEngine::setOsc3Unison (int v, float d, float s)
+{
+    const bool changed = updateIfChanged (lastIntParameters, 18, v)
+                      | updateIfChanged (lastFloatParameters, 57, d)
+                      | updateIfChanged (lastFloatParameters, 58, s);
+    if (changed) forEachVoice ([&] (SynthVoice& voice) { voice.setOsc3Unison (v, d, s); });
+}
+
+#undef SALEK_CACHED_FLOAT
+#undef SALEK_CACHED_INT
 
 } // namespace salek

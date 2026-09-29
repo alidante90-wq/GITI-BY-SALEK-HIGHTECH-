@@ -1,5 +1,17 @@
 #pragma once
+#if defined(_WIN32) && ! defined(NOMINMAX)
+ #define NOMINMAX
+#endif
 #include <JuceHeader.h>
+#include <array>
+#include <iterator>
+
+#if JUCE_WINDOWS
+ #ifndef NOMINMAX
+  #define NOMINMAX
+ #endif
+ #include <windows.h>
+#endif
 
 #if __has_include(<BinaryData.h>)
  #include <BinaryData.h>
@@ -20,6 +32,22 @@ inline juce::File findAssetsDir()
 {
     auto exe = juce::File::getSpecialLocation (juce::File::currentExecutableFile);
     juce::Array<juce::File> candidates;
+    // In a DAW, currentExecutableFile is the host (for example FL64.exe),
+    // not this plug-in. Locate the module that contains this code first so
+    // loose assets beside the VST3 binary are found reliably.
+#if JUCE_WINDOWS
+    static int moduleAnchor = 0;
+    HMODULE module = nullptr;
+    const auto address = reinterpret_cast<LPCWSTR> (&moduleAnchor);
+    if (GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            address, &module) != 0)
+    {
+        wchar_t modulePath[32768] {};
+        const auto length = GetModuleFileNameW (module, modulePath, (DWORD) std::size (modulePath));
+        if (length > 0 && length < std::size (modulePath))
+            candidates.add (juce::File (juce::String (modulePath, (int) length)).getParentDirectory().getChildFile ("Assets"));
+    }
+#endif
     candidates.add (exe.getSiblingFile ("Assets"));
     candidates.add (exe.getParentDirectory().getChildFile ("Assets"));
     candidates.add (exe.getParentDirectory().getParentDirectory().getChildFile ("Assets"));
@@ -139,6 +167,22 @@ inline juce::Image loadIconsAtlas()
 inline juce::Image loadIcon (int index)
 {
     index = juce::jlimit (0, 49, index);
+    // The icons are used across many paint passes. Resolve/decode each PNG
+    // once; repeated file probes and PNG decoding on every repaint made the
+    // editor stutter, especially with several plug-in windows open.
+    static std::array<juce::Image, 50> cache;
+    static std::array<bool, 50> loaded {};
+    static juce::CriticalSection cacheLock;
+    const juce::ScopedLock lock (cacheLock);
+    if (loaded[(size_t) index])
+        return cache[(size_t) index];
+    auto remember = [&] (juce::Image image)
+    {
+        cache[(size_t) index] = image;
+        loaded[(size_t) index] = true;
+        return image;
+    };
+
     static constexpr const char* names[] = {
         "osc1", "osc2", "osc3", "wavetable", "frame_morph", "fm", "am", "rm", "pm", "sub",
         "noise", "filter1", "filter2", "filter3", "filter4", "envelope", "multistage", "lfo", "lfo_sync", "lfo_random",
@@ -154,7 +198,21 @@ inline juce::Image loadIcon (int index)
                            juce::String ("Source_Assets_icons_") + stem + "_png" })
     {
         auto img = fromBinaryName (resource.toRawUTF8());
-        if (img.isValid()) return img;
+        if (img.isValid()) return remember (img);
+    }
+    // Resource IDs can include or omit source-folder prefixes depending on
+    // how JUCE/CMake was invoked. Match the unique icon filename suffix too.
+    for (int i = 0; i < BinaryData::namedResourceListSize; ++i)
+    {
+        const juce::String resourceName (BinaryData::namedResourceList[i]);
+        if (resourceName.endsWithIgnoreCase (stem + "_png"))
+        {
+            auto img = fromBinaryName (resourceName.toRawUTF8());
+            if (img.isValid())
+            {
+                return remember (img);
+            }
+        }
     }
 #endif
     auto dir = findAssetsDir();
@@ -162,9 +220,12 @@ inline juce::Image loadIcon (int index)
     if (file.existsAsFile())
     {
         auto img = juce::ImageFileFormat::loadFrom (file);
-        if (img.isValid()) return img;
+        if (img.isValid())
+        {
+            return remember (img);
+        }
     }
-    return {};
+    return remember ({});
 }
 
 inline juce::Image loadSalekSheetLogo()
@@ -279,41 +340,40 @@ inline juce::Image loadCharPinkDead()
     return fromDisk ({ "char_pink_dead.png" });
 }
 
-/** 10 character models (binary + disk fallback) */
-inline juce::Image loadCharPortrait (int index = 0)
+/** Keep large character artwork at UI resolution instead of retaining full PNGs. */
+inline juce::Image downscaleMax (juce::Image image, int maxWidth, int maxHeight)
 {
-    // Prefer binary-embedded loaders first
-    auto loadBin = [] (const char* res) -> juce::Image {
-        auto im = fromBinaryName (res);
-        return im;
+    if (! image.isValid() || (image.getWidth() <= maxWidth && image.getHeight() <= maxHeight))
+        return image;
+    const auto scale = juce::jmin ((float) maxWidth / (float) juce::jmax (1, image.getWidth()),
+                                   (float) maxHeight / (float) juce::jmax (1, image.getHeight()));
+    const int width = juce::jmax (1, (int) std::round (image.getWidth() * scale));
+    const int height = juce::jmax (1, (int) std::round (image.getHeight() * scale));
+    return image.rescaled (width, height, juce::Graphics::mediumResamplingQuality);
+}
+
+/** Decode only the selected model (the old implementation decoded the whole bank per call). */
+inline juce::Image loadCharPortrait (int index = 0, int maxWidth = 480, int maxHeight = 720)
+{
+    auto loadBin = [] (const char* resource) -> juce::Image {
+        return fromBinaryName (resource);
     };
-    juce::Image imgs[] = {
-        loadCharToronowla(),
-        loadCharNeonStreet(),
-        loadCharPinkDead(),
-        loadBin ("char_apron_png"),
-        loadBin ("char_catgirl_png"),
-        loadBin ("char_cyber_white_png"),
-        loadBin ("char_foxgirl_png"),
-        loadBin ("char_gun_png"),
-        loadBin ("char_purple_latex_png"),
-        loadBin ("char_white_suit_png"),
-        loadCharApron(),
-        loadCharCatgirl(),
-        loadCharCyber(),
-        loadCharFox(),
-        loadCharGun(),
-        loadCharPurple(),
-        loadCharWhite()
-    };
-    const int n = (int) (sizeof (imgs) / sizeof (imgs[0]));
-    // skip invalid by walking
-    for (int k = 0; k < n; ++k)
+    juce::Image image;
+    switch ((index % 10 + 10) % 10)
     {
-        auto& im = imgs[(index + k) % n];
-        if (im.isValid()) return im;
+        case 0: image = loadCharToronowla(); break;
+        case 1: image = loadCharNeonStreet(); break;
+        case 2: image = loadCharPinkDead(); break;
+        case 3: image = loadBin ("char_apron_png"); if (! image.isValid()) image = loadCharApron(); break;
+        case 4: image = loadBin ("char_catgirl_png"); if (! image.isValid()) image = loadCharCatgirl(); break;
+        case 5: image = loadBin ("char_cyber_white_png"); if (! image.isValid()) image = loadCharCyber(); break;
+        case 6: image = loadBin ("char_foxgirl_png"); if (! image.isValid()) image = loadCharFox(); break;
+        case 7: image = loadBin ("char_gun_png"); if (! image.isValid()) image = loadCharGun(); break;
+        case 8: image = loadBin ("char_purple_latex_png"); if (! image.isValid()) image = loadCharPurple(); break;
+        case 9: image = loadBin ("char_white_suit_png"); if (! image.isValid()) image = loadCharWhite(); break;
+        default: break;
     }
-    return {};
+    return downscaleMax (image, maxWidth, maxHeight);
 }
 
 inline juce::Image loadHero() { return loadBgIsatis(); }

@@ -71,7 +71,7 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
     for (int i = 0; i < 10; ++i)
     {
         auto* ic = new juce::ImageComponent ("model" + juce::String (i));
-        auto im = SalekAssets::loadCharPortrait (i);
+        auto im = SalekAssets::loadCharPortrait (i, 160, 240); // thumbnail size keeps multi-instance RAM low
         if (im.isValid())
         {
             ic->setImage (im);
@@ -180,7 +180,7 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
         void mouseUp (const juce::MouseEvent& e) override
         {
             if (ed == nullptr || ! ed->isModDragging) return;
-            auto pos = e.getEventRelativeTo (ed).getPosition();
+            const auto pos = ed->currentMousePositionInEditor();
             float amt = 0.5f;
             if (e.mods.isShiftDown()) amt = 1.0f;
             if (e.mods.isAltDown()) amt = -0.5f;
@@ -217,19 +217,16 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
             ed->armedModSource = src;
             ed->isModDragging = true;
             ed->setMouseCursor (juce::MouseCursor::CopyingCursor);
-            // Also try JUCE DnD for targets that implement DragAndDropTarget
-            if (! ed->isDragAndDropActive())
-            {
-                juce::String desc = "SALEK_LFO" + juce::String (src);
-                ed->startDragging (desc, e.eventComponent);
-            }
+            // Keep the source's mouse capture until release. The host's
+            // drag manager can steal that capture in several DAWs, so route
+            // the release against the screen-space pointer directly instead.
         }
         void mouseUp (const juce::MouseEvent& e) override
         {
             if (ed == nullptr) return;
             if (ed->isModDragging || ed->armedModSource >= 0)
             {
-                auto pos = e.getEventRelativeTo (ed).getPosition();
+                const auto pos = ed->currentMousePositionInEditor();
                 float amt = 0.5f;
                 if (e.mods.isShiftDown()) amt = 1.0f;
                 if (e.mods.isAltDown()) amt = -0.5f;
@@ -411,6 +408,7 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
             int i = processor.getCurrentProgram();
             if (i > 0) processor.setCurrentProgram (i - 1);
             presetLabel.setText (processor.getProgramName (processor.getCurrentProgram()), juce::dontSendNotification);
+            presetLabel.setTooltip (processor.getProgramDescription (processor.getCurrentProgram()));
             presetList.updateContent();
             presetList.repaint();
         };
@@ -418,18 +416,21 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
             int i = processor.getCurrentProgram();
             if (i + 1 < processor.getNumPrograms()) processor.setCurrentProgram (i + 1);
             presetLabel.setText (processor.getProgramName (processor.getCurrentProgram()), juce::dontSendNotification);
+            presetLabel.setTooltip (processor.getProgramDescription (processor.getCurrentProgram()));
             presetList.updateContent();
             presetList.repaint();
         };
         initBtn.onClick = [this] {
             processor.setCurrentProgram (0);
             presetLabel.setText (processor.getProgramName (0), juce::dontSendNotification);
+            presetLabel.setTooltip (processor.getProgramDescription (0));
             presetList.updateContent();
             presetList.repaint();
         };
         #include "PluginEditorPresetIO.inl"
         rebuildPresetRows();
         presetLabel.setText (processor.getProgramName (processor.getCurrentProgram()), juce::dontSendNotification);
+        presetLabel.setTooltip (processor.getProgramDescription (processor.getCurrentProgram()));
     }
 
     {
@@ -528,13 +529,11 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
         const auto M = juce::Colour (0xffff2d9b);
         const auto O = juce::Colour (0xff39ff14);
         const auto G = juce::Colour (0xff7c4dff);
-        addKnob (seqTab, "arp_rate", "ARP RATE", C);
-        addKnob (seqTab, "arp_octaves", "ARP OCT", M);
+        // Keep the sequencer strip focused: four controls, all clearly named
+        // for the step sequencer. ARP retains its own stable engine defaults.
         addKnob (seqTab, "seq_rate", "SEQ RATE", O);
-        addKnob (seqTab, "arp_gate", "ARP GATE", O);
-        addKnob (seqTab, "arp_swing", "ARP SWING", G);
-        addKnob (seqTab, "seq_length", "STEPS", C);
-        addKnob (seqTab, "seq_swing", "SWING", M);
+        addKnob (seqTab, "seq_length", "SEQ STEPS", C);
+        addKnob (seqTab, "seq_swing", "SEQ SWING", M);
         addKnob (seqTab, "seq_gate", "SEQ GATE", O);
         // Extra voice colour — registered last so indices of FX/MOD stay stable
         addKnob (envTab, "glide", "GLIDE", C);
@@ -836,6 +835,12 @@ void SalekHightechAudioProcessorEditor::tryAssignModAt (juce::Point<int> editorP
     }
 }
 
+juce::Point<int> SalekHightechAudioProcessorEditor::currentMousePositionInEditor() const
+{
+    const auto screen = juce::Desktop::getInstance().getMainMouseSource().getScreenPosition().roundToInt();
+    return getLocalPoint (nullptr, screen);
+}
+
 void SalekHightechAudioProcessorEditor::mouseDrag (const juce::MouseEvent& e)
 {
     juce::AudioProcessorEditor::mouseDrag (e);
@@ -845,7 +850,7 @@ void SalekHightechAudioProcessorEditor::mouseUp (const juce::MouseEvent& e)
     // Fallback: if LFO armed and release over a knob, assign (even without DnD target hit)
     if (armedModSource >= 0 && e.mouseWasDraggedSinceMouseDown())
     {
-        auto pos = e.getEventRelativeTo (this).getPosition();
+        auto pos = currentMousePositionInEditor();
         float amt = 0.5f;
         if (e.mods.isShiftDown()) amt = 1.0f;
         if (e.mods.isAltDown()) amt = -0.5f;

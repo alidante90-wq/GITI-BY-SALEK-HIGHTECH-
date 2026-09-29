@@ -1,16 +1,7 @@
 void SalekHightechAudioProcessorEditor::refreshCharCache()
 {
     // Downscale once — full-res PNGs destroy UI FPS
-    auto loadScaled = [] (int idx, int maxH) -> juce::Image
-    {
-        auto src = SalekAssets::loadCharPortrait (idx);
-        if (! src.isValid()) return {};
-        if (src.getHeight() <= maxH) return src;
-        const int h = maxH;
-        const int w = juce::jmax (1, src.getWidth() * h / src.getHeight());
-        return src.rescaled (w, h, juce::Graphics::mediumResamplingQuality);
-    };
-    charImgL = loadScaled (charPortraitIdx, 480); // larger model in left slot // single model, lighter cache
+    charImgL = SalekAssets::loadCharPortrait (charPortraitIdx, 480, 720);
     charImgR = {}; // right portrait removed — saves RAM/CPU
 }
 

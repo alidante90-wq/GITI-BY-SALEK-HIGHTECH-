@@ -189,7 +189,12 @@ public:
         g.setColour (accent.withAlpha (0.25f));
         g.fillRect (plot.getRight() - 4.f, plot.getBottom() - bh, 3.f, bh);
     }
-    void timerCallback() override { phase += 0.08f + level * 0.1f; repaint(); }
+    void timerCallback() override
+    {
+        if (! isShowing()) return;
+        phase += 0.08f + level * 0.1f;
+        repaint();
+    }
 
 private:
     void setBandFromX (float x, juce::Rectangle<float> plot)
