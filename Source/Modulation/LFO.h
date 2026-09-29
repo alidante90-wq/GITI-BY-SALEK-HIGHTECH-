@@ -9,9 +9,9 @@ public:
     static constexpr int TableSize = 32;
     static constexpr int NumShapes = 32;
 
-    void prepare(double sampleRate){ sr=sampleRate>0?sampleRate:44100; phase=0; loadPresetShape(0); }
+    void prepare(double sampleRate){ sr=sampleRate>0?sampleRate:44100; phase=0; phaseInc=double(rate)/sr; loadPresetShape(0); }
     void reset() noexcept { phase=0; lastSH=0; }
-    void setRate(float hz) noexcept { hz=juce::jlimit(0.01f,40.f,hz); if (std::abs(hz-rate)>0.0001f) { rate=hz; phaseInc=double(rate)/sr; } }
+    void setRate(float hz) noexcept { rate=juce::jlimit(0.01f,40.f,hz); phaseInc=double(rate)/sr; }
     void setWave(Wave w) noexcept { wave=w; }
     void setAmount(float a) noexcept { amount=juce::jlimit(0.f,1.f,a); }
     void setCustomPoint (int i, float v) noexcept
@@ -150,6 +150,16 @@ public:
         }
         phase+=phaseInc; if(phase>=1) phase-=1;
         return v*amount;
+    }
+
+    // The modulation matrix is evaluated once per audio block. Advance the
+    // LFO through the whole block so its speed stays in Hz at every buffer size.
+    float processBlock (int numSamples) noexcept
+    {
+        float value = 0.f;
+        for (int i = 0; i < juce::jmax (1, numSamples); ++i)
+            value = process();
+        return value;
     }
 
     float getPhase() const noexcept { return (float) phase; }

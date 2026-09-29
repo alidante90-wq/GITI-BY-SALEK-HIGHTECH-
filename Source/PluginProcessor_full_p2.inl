@@ -1,5 +1,5 @@
 
-void SalekHightechAudioProcessor::applyParamsToEngine()
+void SalekHightechAudioProcessor::applyParamsToEngine (int samplesThisBlock)
 {
     auto g = [&](const char* id) -> float { if (auto* p = apvts.getRawParameterValue(id)) return p->load(); return 0.f; };
     float o1l = juce::jlimit(0.f,1.f, g("osc1_level") + modMatrix.getModulation(salek::ModMatrix::Dest::Osc1Level)*0.5f);
@@ -94,9 +94,9 @@ void SalekHightechAudioProcessor::applyParamsToEngine()
     setLfo (lfo2, g("lfo2_rate"), g("lfo2_amount"), (int) g("lfo2_wave"));
     setLfo (lfo3, g("lfo3_rate"), g("lfo3_amount"), (int) g("lfo3_wave"));
 
-    float v1 = lfo1.process() * g("lfo_amount");
-    float v2 = lfo2.process() * g("lfo2_amount");
-    float v3 = lfo3.process() * g("lfo3_amount");
+    float v1 = lfo1.processBlock (samplesThisBlock) * g("lfo_amount");
+    float v2 = lfo2.processBlock (samplesThisBlock) * g("lfo2_amount");
+    float v3 = lfo3.processBlock (samplesThisBlock) * g("lfo3_amount");
     modMatrix.setSourceValue (salek::ModMatrix::Source::LFO1, v1);
     modMatrix.setSourceValue (salek::ModMatrix::Source::LFO2, v2);
     modMatrix.setSourceValue (salek::ModMatrix::Source::LFO3, v3);
@@ -172,7 +172,7 @@ void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         synthEngine.allNotesOff();
     }
 
-    applyParamsToEngine();
+    applyParamsToEngine (buffer.getNumSamples());
     keyboardState.processNextMidiBuffer (midi, 0, buffer.getNumSamples(), true);
 
     const bool seqOn = apvts.getRawParameterValue("seq_on")->load() > 0.5f;

@@ -170,11 +170,11 @@
             const auto O = juce::Colour (0xff39ff14);
             const auto V = juce::Colour (0xffc0ff00);
             const auto G = juce::Colour (0xff7c4dff);
-            addKnob (lfoTab, "lfo_rate", "LFO1 RT", C);
+            addKnob (lfoTab, "lfo_rate", "LFO1 Hz", C);
             addKnob (lfoTab, "lfo_amount", "LFO1 AMT", M);
-            addKnob (lfoTab, "lfo2_rate", "LFO2 RT", O);
+            addKnob (lfoTab, "lfo2_rate", "LFO2 Hz", O);
             addKnob (lfoTab, "lfo2_amount", "LFO2 AMT", V);
-            addKnob (lfoTab, "lfo3_rate", "LFO3 RT", G);
+            addKnob (lfoTab, "lfo3_rate", "LFO3 Hz", G);
             addKnob (lfoTab, "lfo3_amount", "LFO3 AMT", C);
         }
 

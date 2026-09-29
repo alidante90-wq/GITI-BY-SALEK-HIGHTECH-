@@ -83,7 +83,7 @@ public:
 
 private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    void applyParamsToEngine();
+    void applyParamsToEngine (int samplesThisBlock);
     void initFactoryPresets();
     void loadFactoryPreset (int index);
 

@@ -595,11 +595,12 @@ void SalekHightechAudioProcessorEditor::resized()
     // SEQ
     {
         auto bounds = seqTab.getLocalBounds().reduced (6);
-        auto top = bounds.removeFromTop (116);
-        auto toggles = top.removeFromLeft (120);
-        arpOn.setBounds (toggles.removeFromTop (36).reduced (2));
-        seqOn.setBounds (toggles.removeFromTop (36).reduced (2));
-        seqMagicTargetBox.setBounds (toggles.reduced (2, 1));
+        auto top = bounds.removeFromTop (176);
+        auto leftControls = top.removeFromLeft (156).reduced (2, 0);
+        auto toggleRow = leftControls.removeFromTop (30);
+        arpOn.setBounds (toggleRow.removeFromLeft (toggleRow.getWidth() / 2).reduced (2, 1));
+        seqOn.setBounds (toggleRow.reduced (2, 1));
+        seqMagicTargetBox.setBounds (leftControls.removeFromTop (26).reduced (2, 1));
         seqMagicTargetBox.setTooltip ("Choose whether the running step sequence moves Magic X, Y, or both.");
         auto placeSeqKnob = [this] (juce::Rectangle<int> cell, const char* id)
         {
@@ -616,12 +617,18 @@ void SalekHightechAudioProcessorEditor::resized()
                     break;
                 }
         };
-        auto controls = top.reduced (4, 1);
-        const int controlWidth = controls.getWidth() / 5;
-        const char* seqIds[] = { "seq_rate", "seq_length", "seq_swing", "seq_gate", "seq_magic_depth" };
-        for (int i = 0; i < 5; ++i)
+        placeSeqKnob (leftControls.reduced (2, 0), "seq_magic_depth");
+        auto controls = top.reduced (4, 0);
+        auto arpRow = controls.removeFromTop (72);
+        controls.removeFromTop (4);
+        auto seqRow = controls.removeFromTop (72);
+        const char* arpIds[] = { "arp_rate", "arp_octaves", "arp_gate", "arp_swing" };
+        const char* seqIds[] = { "seq_rate", "seq_length", "seq_swing", "seq_gate" };
+        const int controlWidth = arpRow.getWidth() / 4;
+        for (int i = 0; i < 4; ++i)
         {
-            placeSeqKnob ({ controls.getX() + i * controlWidth, controls.getY(), controlWidth, controls.getHeight() }, seqIds[i]);
+            placeSeqKnob ({ arpRow.getX() + i * controlWidth, arpRow.getY(), controlWidth, arpRow.getHeight() }, arpIds[i]);
+            placeSeqKnob ({ seqRow.getX() + i * controlWidth, seqRow.getY(), controlWidth, seqRow.getHeight() }, seqIds[i]);
         }
         // 2 rows of Magic trigger buttons under seq strip
         {

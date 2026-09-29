@@ -534,8 +534,10 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
         const auto M = juce::Colour (0xffff2d9b);
         const auto O = juce::Colour (0xff39ff14);
         const auto G = juce::Colour (0xff7c4dff);
-        // Keep the sequencer strip focused: four controls, all clearly named
-        // for the step sequencer. ARP retains its own stable engine defaults.
+        addKnob (seqTab, "arp_rate", "ARP RATE", O);
+        addKnob (seqTab, "arp_octaves", "ARP OCT", C);
+        addKnob (seqTab, "arp_gate", "ARP GATE", M);
+        addKnob (seqTab, "arp_swing", "ARP SWING", G);
         addKnob (seqTab, "seq_rate", "SEQ RATE", O);
         addKnob (seqTab, "seq_length", "SEQ STEPS", C);
         addKnob (seqTab, "seq_swing", "SEQ SWING", M);
