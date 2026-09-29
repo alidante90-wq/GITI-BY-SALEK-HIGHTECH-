@@ -58,23 +58,33 @@ jobs:
           $vst3 = Get-ChildItem -Path build-v2 -Recurse -Directory -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object -First 1
           $exe  = Get-ChildItem -Path build-v2 -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue |
                   Where-Object { $_.Name -eq "GITI BY SALEK HIGHTECH.exe" } | Select-Object -First 1
+          if (-not $exe) {
+            $exe = Get-ChildItem -Path build-v2 -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue |
+                   Where-Object { $_.Name -match "GITI.*SALEK.*HIGHTECH.*\.exe$" } | Select-Object -First 1
+          }
           Write-Host "VST3: $($vst3.FullName)"
           Write-Host "EXE:  $($exe.FullName)"
-          if ($vst3) { Copy-Item -Recurse $vst3.FullName "package\GITI BY SALEK HIGHTECH.vst3" }
-          if ($exe)  { Copy-Item $exe.FullName "package\GITI BY SALEK HIGHTECH.exe" }
+          if (-not $vst3) { Write-Error "VST3 output was not built"; exit 1 }
+          if (-not $exe) {
+            Write-Error "Standalone EXE was not built; refusing to publish an incomplete package"
+            Get-ChildItem -Path build-v2 -Recurse -Include *.exe,*.vst3 | Select-Object FullName
+            exit 1
+          }
+          Copy-Item -Recurse $vst3.FullName "package\GITI BY SALEK HIGHTECH.vst3"
+          Copy-Item $exe.FullName "package\GITI BY SALEK HIGHTECH.exe"
           if (Test-Path "Source/Assets") {
             Copy-Item -Recurse "Source/Assets" "package/Assets"
           }
-          if (-not (Get-ChildItem package -ErrorAction SilentlyContinue)) {
-            Write-Error "No artifacts found"
-            Get-ChildItem -Path build-v2 -Recurse -Include *.exe,*.vst3,*.dll | Select-Object FullName
-            exit 1
-          }
-          Compress-Archive -Path "package\*" -DestinationPath "GITI_BY_SALEK_HIGHTECH_VST3.zip" -Force
+          Set-Content -Path "package\README.txt" -Value @(
+            "GITI BY SALEK HIGHTECH Windows package",
+            "Standalone: run GITI BY SALEK HIGHTECH.exe",
+            "VST3: copy the complete GITI BY SALEK HIGHTECH.vst3 folder to C:\Program Files\Common Files\VST3, then rescan plugins in your DAW."
+          ) -Encoding utf8
+          Compress-Archive -Path "package\*" -DestinationPath "SALEK-HIGHTECH-Windows-Standalone-VST3.zip" -Force
 
       - name: Upload VST3 package
         uses: actions/upload-artifact@v4
         with:
-          name: GITI_BY_SALEK_HIGHTECH_VST3
-          path: GITI_BY_SALEK_HIGHTECH_VST3.zip
+          name: SALEK-HIGHTECH-Windows-Standalone-VST3
+          path: SALEK-HIGHTECH-Windows-Standalone-VST3.zip
           if-no-files-found: error
