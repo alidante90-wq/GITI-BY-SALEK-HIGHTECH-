@@ -10,7 +10,7 @@ namespace salek
 class ModMatrix
 {
 public:
-    static constexpr int MaxRoutes = 64; // expanded — plenty of free matrix slots
+    static constexpr int MaxRoutes = 64;
 
     enum class Source : int
     {
@@ -167,6 +167,41 @@ public:
 
     const std::array<Route, MaxRoutes>& getRoutes() const noexcept { return routes; }
     Route& getRoute (int i) noexcept { return routes[static_cast<size_t>(juce::jlimit(0, MaxRoutes-1, i))]; }
+
+    /** Serialize active routes into <MOD_MATRIX> for project/preset state. */
+    std::unique_ptr<juce::XmlElement> toXml() const
+    {
+        auto el = std::make_unique<juce::XmlElement> ("MOD_MATRIX");
+        el->setAttribute ("version", 1);
+        for (int i = 0; i < MaxRoutes; ++i)
+        {
+            const auto& r = routes[static_cast<size_t> (i)];
+            if (! r.active) continue;
+            auto* row = el->createNewChildElement ("ROUTE");
+            row->setAttribute ("src", (int) r.source);
+            row->setAttribute ("dst", (int) r.dest);
+            row->setAttribute ("amt", (double) r.amount);
+        }
+        return el;
+    }
+
+    /** Replace routes from <MOD_MATRIX> (or no-op if null/wrong tag). */
+    void fromXml (const juce::XmlElement* el)
+    {
+        clear();
+        if (el == nullptr || ! el->hasTagName ("MOD_MATRIX")) return;
+
+        for (auto* row = el->getFirstChildElement(); row != nullptr; row = row->getNextElement())
+        {
+            if (! row->hasTagName ("ROUTE")) continue;
+            const int src = row->getIntAttribute ("src", -1);
+            const int dst = row->getIntAttribute ("dst", -1);
+            const float amt = (float) row->getDoubleAttribute ("amt", 0.5);
+            if (src < 0 || src >= (int) Source::NumSources) continue;
+            if (dst < 0 || dst >= (int) Dest::NumDests) continue;
+            addRoute ((Source) src, (Dest) dst, amt);
+        }
+    }
 
 private:
     std::array<Route, MaxRoutes> routes {};
