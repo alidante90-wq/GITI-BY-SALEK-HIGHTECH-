@@ -1,5 +1,6 @@
 #pragma once
 #include "GitiIdentityBank.h"
+#include "../GitiSonicDNA.h"
 #include <JuceHeader.h>
 #include <array>
 #include <cmath>
@@ -25,14 +26,20 @@ struct Random
     std::uint32_t next() noexcept { state ^= state << 13; state ^= state >> 17; state ^= state << 5; return state; }
     float unit() noexcept { return static_cast<float> (next() & 0x00ffffffu) / 16777216.0f; }
     float range (float a, float b) noexcept { return a + (b - a) * unit(); }
-    int pick (int n) noexcept { return static_cast<int> (next() % static_cast<std::uint32_t> (n)); }
+    int pick (int n) noexcept { return static_cast<int> (next() % static_cast<std::uint32_t> (juce::jmax (1, n))); }
     std::uint32_t state;
 };
 
 inline std::vector<Preset> makePresets()
 {
-    static constexpr const char* categories[] = { "ATMOSPHERE", "LEAD", "BASS", "PULSE", "TEXTURE", "SEQUENCE", "FM", "FX", "PLUCK", "DRONE" };
-    static constexpr const char* roles[] = { "Origin", "Signal", "Motion", "Shadow", "Halo", "Memory", "Vector", "Ritual", "Bloom", "Terminal" };
+    static constexpr const char* categories[] = {
+        "ATMOSPHERE", "LEAD", "BASS", "PULSE", "TEXTURE",
+        "SEQUENCE", "FM", "FX", "PLUCK", "DRONE"
+    };
+    static constexpr const char* roles[] = {
+        "Origin", "Signal", "Motion", "Shadow", "Halo",
+        "Memory", "Vector", "Ritual", "Bloom", "Terminal"
+    };
     static constexpr const char* bankNames[5][10] = {
         { "Air", "Reed", "Inhale", "Horizon", "Wind", "Lung", "Whisper", "Silver", "Dawn", "Sky" },
         { "Bow", "String", "Cedar", "Resonance", "Pluck", "Thread", "Tremolo", "Harp", "Lantern", "Cathedral" },
@@ -40,108 +47,122 @@ inline std::vector<Preset> makePresets()
         { "Heart", "Frame", "Drum", "Impact", "Step", "Ember", "Thunder", "Ritual", "Sub", "Meter" },
         { "Rain", "Stone", "River", "Root", "Glass", "Cave", "Tide", "Seed", "Monsoon", "Earth" }
     };
-    static constexpr int waveFrames[] = { 0, 1, 2, 3, 6, 8, 11, 13, 16, 19, 22, 29, 40, 64, 96 };
+
     std::vector<Preset> result;
     result.reserve (identities.size() * 50);
 
     for (std::size_t gi = 0; gi < identities.size(); ++gi)
     {
         const auto& id = identities[gi];
+        const SonicSeed base = seedForIndex ((int) gi);
         int branch = 0;
         if (std::string (id.branch) == "Strings") branch = 1;
         else if (std::string (id.branch) == "Voice") branch = 2;
         else if (std::string (id.branch) == "Pulse") branch = 3;
         else if (std::string (id.branch) == "Earth & Water") branch = 4;
-        const float identityBias = 0.35f + static_cast<float> (hash32 (id.voice) % 100u) / 200.0f;
+
         for (int pi = 0; pi < 50; ++pi)
         {
-            const auto seed = hash32 ((std::string (id.number) + "|" + std::to_string (pi) + "|GITI-SONIC-CORE").c_str());
+            const auto seed = hash32 ((std::string (id.number) + "|" + std::to_string (pi) + "|GITI-DNA-v2").c_str());
             Random rng (seed);
             const char* bank = bankNames[branch][rng.pick (10)];
             const char* role = roles[rng.pick (10)];
             const int categoryIndex = pi % 10;
             const char* category = categories[categoryIndex];
             const auto suffix = juce::String (pi + 1).paddedLeft ('0', 2);
-            const auto displayName = juce::String ("GITI ") + id.number + "/" + id.name + " · " + bank + " " + role + " — " + category + " " + suffix;
+            const auto displayName = juce::String ("GITI ") + id.number + "/" + id.name
+                + " · " + bank + " " + role + " — " + category + " " + suffix;
+
             std::map<juce::String, float> v;
-            auto put = [&] (const char* key, float value) { v.emplace (key, value); };
+            applySeedToMap (base, v); // DNA base first
+
             auto r = [&] (float lo, float hi) { return rng.range (lo, hi); };
-            auto level = [&] (float lo, float hi) { return juce::jlimit (0.0f, 1.0f, r (lo, hi)); };
-            const int wf1 = waveFrames[rng.pick (15)], wf2 = waveFrames[rng.pick (15)], wf3 = waveFrames[rng.pick (15)];
-            const float timbreBias = (static_cast<float> (branch) - 2.0f) * 0.045f;
+            auto nudge = [&] (const char* key, float lo, float hi)
+            {
+                auto it = v.find (key);
+                float cur = (it != v.end()) ? it->second : 0.f;
+                v[key] = juce::jlimit (lo, hi, cur + r (-0.08f, 0.12f));
+            };
 
-            // Identity-weighted, complete native SHAE patch state. Every preset
-            // varies oscillator, modulation, envelope, filter, motion and effects.
-            put ("osc1_level", juce::jlimit (0.25f, 0.96f, r (0.48f, 0.88f) * (0.78f + identityBias * 0.35f)));
-            put ("osc2_level", level (0.12f, 0.66f)); put ("osc3_level", level (0.06f, 0.48f));
-            put ("osc1_table", wf1 / 127.0f); put ("osc2_table", wf2 / 127.0f); put ("osc3_table", wf3 / 127.0f);
-            put ("osc1_octave", branch == 3 ? -1.0f : 0.0f); put ("osc2_octave", r (-1.0f, 1.01f)); put ("osc3_octave", branch == 3 ? -2.0f : r (-1.0f, 1.01f));
-            put ("osc1_semi", r (-7.0f, 7.01f)); put ("osc2_semi", r (-12.0f, 12.01f)); put ("osc3_semi", r (-5.0f, 5.01f));
-            put ("osc1_fine", r (-18.0f, 18.0f)); put ("osc2_fine", r (-24.0f, 24.0f)); put ("osc3_fine", r (-32.0f, 32.0f));
-            put ("osc1_phase", r (0.0f, 1.0f)); put ("osc2_phase", r (0.0f, 1.0f)); put ("osc3_phase", r (0.0f, 1.0f));
-            put ("osc1_rand", r (0.0f, 0.35f)); put ("osc2_rand", r (0.0f, 0.5f)); put ("osc3_rand", r (0.0f, 0.6f));
-            put ("osc1_warp", level (0.04f, 0.8f)); put ("osc2_warp", level (0.0f, 0.85f)); put ("osc3_warp", level (0.0f, 0.75f));
-            put ("osc1_fold", level (0.0f, 0.48f)); put ("osc2_fold", level (0.0f, 0.55f)); put ("osc3_fold", level (0.0f, 0.5f));
-            put ("osc1_drive", level (0.0f, 0.48f)); put ("osc2_drive", level (0.0f, 0.4f)); put ("osc3_drive", level (0.0f, 0.35f));
-            put ("osc1_unison", static_cast<float> (1 + rng.pick (7))); put ("osc2_unison", static_cast<float> (1 + rng.pick (5))); put ("osc3_unison", static_cast<float> (1 + rng.pick (4)));
-            put ("osc1_udet", r (2.0f, 24.0f)); put ("osc2_udet", r (1.0f, 18.0f)); put ("osc3_udet", r (0.0f, 14.0f));
-            put ("osc1_uspread", r (0.25f, 1.0f)); put ("osc2_uspread", r (0.15f, 0.95f)); put ("osc3_uspread", r (0.05f, 0.85f));
-            put ("fm_2to1", level (0.0f, 0.65f)); put ("fm_3to1", level (0.0f, 0.5f)); put ("fm_3to2", level (0.0f, 0.45f));
-            put ("pm_2to1", level (0.0f, 0.55f)); put ("am_2to1", level (0.0f, 0.55f)); put ("rm_2to1", level (0.0f, 0.4f));
-            const float cutoffNorm = juce::jlimit (0.18f, 0.95f, r (0.24f, 0.88f) + timbreBias);
-            put ("filter_cutoff", 25.0f * std::pow (720.0f, cutoffNorm)); put ("filter_reso", level (0.04f, 0.76f)); put ("filter_drive", level (0.0f, 0.55f)); put ("filter_env", level (0.0f, 0.9f));
-            put ("filter_mode", static_cast<float> (rng.pick (categoryIndex == 2 ? 4 : 12)));
-            put ("amp_attack", branch == 3 ? r (0.001f, 0.08f) : r (0.005f, 0.42f)); put ("amp_decay", r (0.08f, 0.85f)); put ("amp_sustain", r (0.28f, 0.95f)); put ("amp_release", branch == 3 ? r (0.06f, 0.6f) : r (0.18f, 2.2f));
-            put ("lfo_rate", r (0.12f, 14.0f)); put ("lfo_amount", level (0.0f, 0.72f)); put ("lfo_wave", static_cast<float> (rng.pick (12)));
-            put ("lfo2_rate", r (0.08f, 9.0f)); put ("lfo2_amount", level (0.0f, 0.62f)); put ("lfo2_wave", static_cast<float> (rng.pick (12)));
-            put ("lfo3_rate", r (0.05f, 5.0f)); put ("lfo3_amount", level (0.0f, 0.42f)); put ("lfo3_wave", static_cast<float> (rng.pick (12)));
-            put ("delay_mix", level (0.0f, 0.68f)); put ("delay_time", r (80.0f, 720.0f)); put ("delay_fb", r (0.08f, 0.68f)); put ("delay_tone", r (0.3f, 0.95f)); put ("delay_mode", static_cast<float> (rng.pick (3)));
-            put ("chorus_mix", level (0.0f, 0.68f)); put ("chorus_rate", r (0.08f, 2.8f)); put ("chorus_depth", r (0.15f, 0.9f));
-            put ("reverb_mix", level (0.0f, branch == 4 ? 0.85f : 0.68f)); put ("reverb_size", r (0.2f, 0.95f)); put ("reverb_decay", r (0.25f, 0.92f)); put ("reverb_damp", r (0.15f, 0.85f)); put ("reverb_mode", static_cast<float> (rng.pick (5)));
-            put ("dist_mix", level (0.0f, 0.62f)); put ("dist_drive", level (0.0f, 0.68f)); put ("dist_crush", level (0.0f, 0.36f)); put ("dist_mode", static_cast<float> (rng.pick (6)));
-            put ("master_drive", level (0.0f, 0.45f)); put ("master_gain", r (0.68f, 0.9f)); put ("comp_mix", r (0.15f, 0.72f)); put ("comp_threshold", r (-24.0f, -8.0f)); put ("comp_ratio", r (2.0f, 8.0f));
-            put ("spatial_size", r (0.25f, 0.9f)); put ("spatial_azim", r (-45.0f, 45.0f));
-            put ("macro1", r (0.2f, 0.95f)); put ("macro2", r (0.1f, 0.95f)); put ("macro3", r (0.15f, 0.92f)); put ("macro4", r (0.2f, 0.95f));
-            put ("seq_on", (categoryIndex == 5 || categoryIndex == 3) && rng.unit() > 0.35f ? 1.0f : 0.0f); put ("seq_rate", static_cast<float> (1 + rng.pick (8))); put ("seq_length", static_cast<float> (8 + rng.pick (9))); put ("seq_swing", r (0.0f, 0.3f)); put ("seq_gate", r (0.35f, 0.95f));
-            put ("arp_on", (categoryIndex == 5 || categoryIndex == 1) && rng.unit() > 0.55f ? 1.0f : 0.0f); put ("arp_rate", static_cast<float> (1 + rng.pick (16))); put ("arp_octaves", static_cast<float> (1 + rng.pick (3))); put ("arp_gate", r (0.35f, 0.95f)); put ("arp_swing", r (0.0f, 0.25f));
+            // Light variation from DNA
+            v["osc2_level"] = juce::jlimit (0.f, 0.7f, base.osc2Level + r (-0.05f, 0.15f));
+            v["osc3_level"] = juce::jlimit (0.f, 0.45f, r (0.0f, 0.25f));
+            v["osc1_table"] = juce::jlimit (0.f, 0.18f, base.osc1Table + r (-0.04f, 0.06f));
+            v["osc2_table"] = juce::jlimit (0.f, 0.18f, r (0.02f, 0.14f));
+            v["osc3_table"] = juce::jlimit (0.f, 0.18f, r (0.0f, 0.12f));
+            v["osc1_semi"] = r (-5.f, 5.f); v["osc2_semi"] = r (-7.f, 12.f); v["osc3_semi"] = r (-5.f, 7.f);
+            v["osc2_octave"] = (float) (rng.pick (3) - 1);
+            v["fm_2to1"] = juce::jlimit (0.f, 0.35f, base.fm2to1 + r (-0.05f, 0.12f));
+            v["fm_3to1"] = r (0.f, 0.18f);
+            v["lfo_rate"] = r (0.15f, 8.f); v["lfo_amount"] = r (0.05f, 0.28f);
+            v["lfo2_rate"] = r (0.1f, 4.f); v["lfo2_amount"] = r (0.0f, 0.2f);
+            v["comp_mix"] = r (0.15f, 0.4f); v["comp_threshold"] = r (-20.f, -10.f);
+            v["seq_on"] = 0.f; v["arp_on"] = 0.f;
 
-            if (categoryIndex == 0 || categoryIndex == 9) { v["amp_attack"] = r (0.28f, 1.2f); v["amp_release"] = r (0.7f, 3.2f); v["reverb_mix"] = r (0.38f, 0.78f); }
-            if (categoryIndex == 1) { v["amp_attack"] = r (0.001f, 0.025f); v["filter_cutoff"] = r (2800.f, 9500.f); v["delay_mix"] = r (0.18f, 0.55f); }
-            if (categoryIndex == 2) { v["osc1_octave"] = branch == 3 ? -2.f : -1.f; v["osc1_unison"] = 1.f; v["filter_cutoff"] = r (80.f, 900.f); v["sub_level"] = r (0.22f, 0.55f); }
-            if (categoryIndex == 3 || categoryIndex == 5) { v["arp_on"] = 0.f; v["seq_on"] = 1.f; v["amp_attack"] = r (0.001f, 0.04f); }
-            if (categoryIndex == 6) { v["fm_2to1"] = r (0.35f, 0.92f); v["fm_3to1"] = r (0.12f, 0.65f); }
-            if (categoryIndex == 7) { v["dist_mix"] = r (0.25f, 0.72f); v["phaser_mix"] = r (0.18f, 0.65f); }
-            if (categoryIndex == 8) { v["amp_attack"] = r (0.001f, 0.008f); v["amp_sustain"] = r (0.0f, 0.18f); v["amp_decay"] = r (0.12f, 0.4f); }
+            // Category morph on top of DNA
+            switch (categoryIndex)
+            {
+                case 0: // ATMOSPHERE
+                    v["amp_attack"] = r (0.35f, 1.1f); v["amp_release"] = r (0.9f, 2.8f);
+                    v["reverb_mix"] = r (0.35f, 0.55f); v["chorus_mix"] = r (0.15f, 0.35f);
+                    v["osc1_unison"] = juce::jmax (v["osc1_unison"], 3.f);
+                    break;
+                case 1: // LEAD
+                    v["amp_attack"] = r (0.002f, 0.02f); v["filter_cutoff"] = r (2800.f, 7000.f);
+                    v["delay_mix"] = r (0.15f, 0.32f); v["amp_sustain"] = r (0.4f, 0.7f);
+                    break;
+                case 2: // BASS
+                    v["osc1_octave"] = -1.f; v["osc1_unison"] = 1.f;
+                    v["filter_cutoff"] = r (120.f, 900.f); v["sub_level"] = r (0.25f, 0.5f);
+                    v["amp_attack"] = r (0.002f, 0.02f); v["reverb_mix"] = r (0.05f, 0.15f);
+                    break;
+                case 3: // PULSE
+                    v["amp_attack"] = r (0.001f, 0.012f); v["amp_decay"] = r (0.1f, 0.28f);
+                    v["amp_sustain"] = r (0.05f, 0.25f); v["filter_env"] = r (0.5f, 0.9f);
+                    break;
+                case 4: // TEXTURE
+                    v["noise_level"] = r (0.05f, 0.18f); v["osc1_warp"] = r (0.1f, 0.25f);
+                    v["chorus_mix"] = r (0.15f, 0.35f); v["lfo_amount"] = r (0.1f, 0.3f);
+                    break;
+                case 5: // SEQUENCE (playable without auto-seq)
+                    v["amp_attack"] = r (0.002f, 0.03f); v["amp_decay"] = r (0.12f, 0.35f);
+                    v["amp_sustain"] = r (0.15f, 0.45f); v["delay_mix"] = r (0.12f, 0.28f);
+                    break;
+                case 6: // FM
+                    v["fm_2to1"] = r (0.22f, 0.4f); v["fm_3to1"] = r (0.08f, 0.22f);
+                    v["osc2_level"] = r (0.25f, 0.55f); v["osc2_octave"] = (float) (1 + rng.pick (2));
+                    break;
+                case 7: // FX
+                    v["dist_mix"] = r (0.05f, 0.18f); v["filter_drive"] = r (0.08f, 0.22f);
+                    v["phaser_mix"] = r (0.1f, 0.3f);
+                    break;
+                case 8: // PLUCK
+                    v["amp_attack"] = r (0.001f, 0.006f); v["amp_sustain"] = r (0.0f, 0.12f);
+                    v["amp_decay"] = r (0.12f, 0.4f); v["amp_release"] = r (0.1f, 0.35f);
+                    v["filter_env"] = r (0.35f, 0.7f);
+                    break;
+                case 9: // DRONE
+                    v["amp_attack"] = r (0.4f, 1.4f); v["amp_sustain"] = r (0.7f, 0.95f);
+                    v["amp_release"] = r (1.2f, 3.5f); v["reverb_mix"] = r (0.35f, 0.55f);
+                    v["lfo_rate"] = r (0.08f, 0.4f); v["lfo_amount"] = r (0.08f, 0.22f);
+                    break;
+                default: break;
+            }
 
-            // Keep the factory bank immediately playable and clean at default
-            // host levels. The original wide random ranges stacked loud unison,
-            // high table frames, fold/FM, compression and distortion together.
+            // Safety caps (playable default levels)
             auto cap = [&] (const char* key, float maximum)
             {
                 auto it = v.find (key);
                 if (it != v.end()) it->second = juce::jmin (it->second, maximum);
             };
             cap ("osc1_table", 0.18f); cap ("osc2_table", 0.18f); cap ("osc3_table", 0.18f);
-            cap ("osc1_warp", 0.22f); cap ("osc2_warp", 0.22f); cap ("osc3_warp", 0.22f);
-            cap ("osc1_fold", 0.12f); cap ("osc2_fold", 0.12f); cap ("osc3_fold", 0.12f);
-            cap ("osc1_drive", 0.12f); cap ("osc2_drive", 0.12f); cap ("osc3_drive", 0.12f);
-            cap ("osc1_unison", 3.f); cap ("osc2_unison", 2.f); cap ("osc3_unison", 2.f);
-            cap ("osc1_udet", 8.f); cap ("osc2_udet", 6.f); cap ("osc3_udet", 4.f);
-            cap ("osc1_rand", 0.08f); cap ("osc2_rand", 0.08f); cap ("osc3_rand", 0.08f);
-            cap ("fm_2to1", 0.24f); cap ("fm_3to1", 0.18f); cap ("fm_3to2", 0.16f);
-            cap ("pm_2to1", 0.2f); cap ("am_2to1", 0.2f); cap ("rm_2to1", 0.16f);
-            cap ("filter_reso", 0.42f); cap ("filter_drive", 0.15f);
-            cap ("lfo_amount", 0.3f); cap ("lfo2_amount", 0.25f); cap ("lfo3_amount", 0.2f);
-            cap ("delay_mix", 0.3f); cap ("chorus_mix", 0.3f); cap ("reverb_mix", 0.35f);
-            cap ("dist_mix", 0.06f); cap ("dist_drive", 0.2f); cap ("dist_crush", 0.0f);
-            cap ("master_drive", 0.08f); cap ("master_gain", 0.74f);
-            cap ("comp_mix", 0.35f); cap ("comp_ratio", 3.5f);
-            if (auto it = v.find ("amp_attack"); it != v.end())
-                it->second = juce::jmax (it->second, 0.006f);
-            // Presets should not start a sequencer/arp against an empty step
-            // pattern. These remain available as explicit performance controls.
-            v["seq_on"] = 0.f;
-            v["arp_on"] = 0.f;
+            cap ("osc1_warp", 0.25f); cap ("osc1_fold", 0.15f); cap ("osc1_drive", 0.15f);
+            cap ("osc1_unison", 5.f); cap ("osc1_udet", 18.f);
+            cap ("fm_2to1", 0.4f); cap ("filter_reso", 0.55f); cap ("filter_drive", 0.25f);
+            cap ("lfo_amount", 0.35f); cap ("delay_mix", 0.35f); cap ("chorus_mix", 0.35f);
+            cap ("reverb_mix", 0.55f); cap ("dist_mix", 0.2f); cap ("master_drive", 0.15f);
+            cap ("master_gain", 0.78f);
+
             result.push_back ({ displayName, std::move (v) });
         }
     }
