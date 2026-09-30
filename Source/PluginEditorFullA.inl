@@ -217,9 +217,8 @@ SalekHightechAudioProcessorEditor::SalekHightechAudioProcessorEditor (SalekHight
             ed->armedModSource = src;
             ed->isModDragging = true;
             ed->setMouseCursor (juce::MouseCursor::CopyingCursor);
-            // Keep the source's mouse capture until release. The host's
-            // drag manager can steal that capture in several DAWs, so route
-            // the release against the screen-space pointer directly instead.
+            if (auto* container = juce::DragAndDropContainer::findParentDragContainerFor (e.eventComponent))
+                container->startDragging ("SALEK_LFO" + juce::String (src), e.eventComponent);
         }
         void mouseUp (const juce::MouseEvent& e) override
         {
@@ -725,44 +724,50 @@ void SalekHightechAudioProcessorEditor::assignModToParam (const juce::String& pa
     using D = salek::ModMatrix::Dest;
     using S = salek::ModMatrix::Source;
     D dest = D::NumDests;
-    if      (paramId == "filter_cutoff") dest = D::FilterCutoff;
-    else if (paramId == "filter_reso")   dest = D::FilterReso;
-    else if (paramId == "osc1_level")    dest = D::Osc1Level;
-    else if (paramId == "osc2_level")    dest = D::Osc2Level;
-    else if (paramId == "osc3_level")    dest = D::Osc3Level;
-    else if (paramId == "osc1_table")    dest = D::Osc1Table;
-    else if (paramId == "osc2_table")    dest = D::Osc2Table;
-    else if (paramId == "osc3_table")    dest = D::Osc3Table;
-    else if (paramId == "osc1_warp")     dest = D::Osc1Warp;
-    else if (paramId == "osc2_warp")     dest = D::Osc2Warp;
-    else if (paramId == "osc3_warp")     dest = D::Osc3Warp;
-    else if (paramId == "osc1_fold")     dest = D::Osc1Fold;
-    else if (paramId == "osc2_fold")     dest = D::Osc2Fold;
-    else if (paramId == "osc3_fold")     dest = D::Osc3Fold;
-    else if (paramId == "osc1_pan")      dest = D::Osc1Pan;
-    else if (paramId == "osc2_pan")      dest = D::Osc2Pan;
-    else if (paramId == "osc3_pan")      dest = D::Osc3Pan;
-    else if (paramId == "osc1_drive")    dest = D::Osc1Drive;
-    else if (paramId == "osc2_drive")    dest = D::Osc2Drive;
-    else if (paramId == "osc3_drive")    dest = D::Osc3Drive;
-    else if (paramId == "fm_2to1")       dest = D::Fm2to1;
-    else if (paramId == "fm_3to1")       dest = D::Fm3to1;
-    else if (paramId == "delay_mix")     dest = D::DelayMix;
-    else if (paramId == "reverb_mix")    dest = D::ReverbMix;
-    else if (paramId == "dist_drive")    dest = D::DistDrive;
-    else if (paramId == "chorus_mix")    dest = D::ChorusMix;
-    else if (paramId == "phaser_mix")    dest = D::PhaserMix;
-    else if (paramId == "filter_env")    dest = D::FilterEnv;
-    else if (paramId == "bassify")       dest = D::Bassify;
-    else if (paramId == "magic_x")       dest = D::MagicX;
-    else if (paramId == "magic_y")       dest = D::MagicY;
-    else if (paramId == "osc1_unison")   dest = D::Osc1Level;
-    else if (paramId == "osc1_udet")     dest = D::Osc1Warp;
-    else if (paramId == "osc1_uspread")  dest = D::Osc1Pan;
-    else if (paramId == "osc2_unison")   dest = D::Osc2Level;
-    else if (paramId == "osc2_udet")     dest = D::Osc2Warp;
-    else if (paramId == "osc3_unison")   dest = D::Osc3Level;
-    else if (paramId == "master_drive")  dest = D::DistDrive;
+    const auto id = paramId;
+
+    if      (id == "filter_cutoff") dest = D::FilterCutoff;
+    else if (id == "filter_reso" || id == "filter_res") dest = D::FilterReso;
+    else if (id == "filter_env") dest = D::FilterEnv;
+    else if (id == "osc1_level") dest = D::Osc1Level;
+    else if (id == "osc2_level") dest = D::Osc2Level;
+    else if (id == "osc3_level") dest = D::Osc3Level;
+    else if (id == "osc1_table" || id == "osc1_wtpos") dest = D::Osc1Table;
+    else if (id == "osc2_table" || id == "osc2_wtpos") dest = D::Osc2Table;
+    else if (id == "osc3_table" || id == "osc3_wtpos") dest = D::Osc3Table;
+    else if (id == "osc1_warp") dest = D::Osc1Warp;
+    else if (id == "osc2_warp") dest = D::Osc2Warp;
+    else if (id == "osc3_warp") dest = D::Osc3Warp;
+    else if (id == "osc1_fold") dest = D::Osc1Fold;
+    else if (id == "osc2_fold") dest = D::Osc2Fold;
+    else if (id == "osc3_fold") dest = D::Osc3Fold;
+    else if (id == "osc1_pan") dest = D::Osc1Pan;
+    else if (id == "osc2_pan") dest = D::Osc2Pan;
+    else if (id == "osc3_pan") dest = D::Osc3Pan;
+    else if (id == "osc1_drive") dest = D::Osc1Drive;
+    else if (id == "osc2_drive") dest = D::Osc2Drive;
+    else if (id == "osc3_drive") dest = D::Osc3Drive;
+    else if (id == "fm_2to1" || id == "osc1_fm") dest = D::Fm2to1;
+    else if (id == "fm_3to1") dest = D::Fm3to1;
+    else if (id == "delay_mix") dest = D::DelayMix;
+    else if (id == "reverb_mix") dest = D::ReverbMix;
+    else if (id == "dist_drive" || id == "dist_mix") dest = D::DistDrive;
+    else if (id == "chorus_mix") dest = D::ChorusMix;
+    else if (id == "phaser_mix") dest = D::PhaserMix;
+    else if (id == "bassify") dest = D::Bassify;
+    else if (id == "magic_x") dest = D::MagicX;
+    else if (id == "magic_y") dest = D::MagicY;
+    else if (id == "master_gain" || id == "amp_level") dest = D::Amp;
+    else if (id == "osc1_fine" || id == "osc1_detune" || id == "glide") dest = D::Pitch;
+    else if (id == "osc1_unison") dest = D::Osc1Level;
+    else if (id == "osc1_udet") dest = D::Osc1Warp;
+    else if (id == "osc1_uspread") dest = D::Osc1Pan;
+    else if (id == "osc2_unison") dest = D::Osc2Level;
+    else if (id == "osc2_udet") dest = D::Osc2Warp;
+    else if (id == "osc3_unison") dest = D::Osc3Level;
+    else if (id == "master_drive") dest = D::DistDrive;
+    else if (id == "sub_level") dest = D::Osc1Level;
+    else if (id == "noise_level") dest = D::Osc3Level;
     else return;
 
     S src = (armedModSource == 0) ? S::LFO1 : (armedModSource == 1) ? S::LFO2 : S::LFO3;
@@ -771,8 +776,6 @@ void SalekHightechAudioProcessorEditor::assignModToParam (const juce::String& pa
     else
         processor.getModMatrix().addRoute (src, dest, juce::jlimit (-1.f, 1.f, amount));
 
-    // Keep LFO armed for multiple routes (click OFF on LFO to disarm)
-    // Brief visual: flash matrix
     if (matrixPanel != nullptr)
         matrixPanel->repaint();
     repaint();
@@ -838,11 +841,28 @@ void SalekHightechAudioProcessorEditor::rebuildPresetRows()
 void SalekHightechAudioProcessorEditor::tryAssignModAt (juce::Point<int> editorPos, float amount, const juce::ModifierKeys&)
 {
     if (armedModSource < 0) return;
+
+    if (auto* hit = getComponentAt (editorPos))
+    {
+        for (auto* c = hit; c != nullptr && c != this; c = c->getParentComponent())
+        {
+            for (auto& k : knobs)
+            {
+                if (k == nullptr) continue;
+                if (c == &k->s || c == &k->name)
+                {
+                    assignModToParam (k->paramId, amount);
+                    return;
+                }
+            }
+        }
+    }
+
     for (auto& k : knobs)
     {
         if (k == nullptr || ! k->s.isShowing()) continue;
-        auto r = getLocalArea (&k->s, k->s.getLocalBounds());
-        auto rn = getLocalArea (&k->name, k->name.getLocalBounds());
+        auto r = getLocalArea (&k->s, k->s.getLocalBounds()).expanded (6);
+        auto rn = getLocalArea (&k->name, k->name.getLocalBounds()).expanded (4);
         if (r.contains (editorPos) || rn.contains (editorPos))
         {
             assignModToParam (k->paramId, amount);
