@@ -354,10 +354,13 @@ void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 void SalekHightechAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     juce::XmlElement root ("SALEK_STATE");
-    root.setAttribute ("version", 1);
+    root.setAttribute ("version", 2);
     root.setAttribute ("program", currentProgram);
     if (auto ap = apvts.copyState().createXml())
         root.addChildElement (new juce::XmlElement (*ap));
+    // Persist LFO/mod routes with project + host preset save
+    if (auto mx = modMatrix.toXml())
+        root.addChildElement (mx.release());
     copyXmlToBinary (root, destData);
 }
 void SalekHightechAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
@@ -368,6 +371,8 @@ void SalekHightechAudioProcessor::setStateInformation (const void* data, int siz
         {
             if (auto* ap = xml->getChildByName (apvts.state.getType()))
                 apvts.replaceState (juce::ValueTree::fromXml (*ap));
+            // Restore mod routes (empty/missing child = clear matrix)
+            modMatrix.fromXml (xml->getChildByName ("MOD_MATRIX"));
             const int prog = xml->getIntAttribute ("program", -1);
             if (prog >= 0 && prog < (int) factoryPresets.size())
                 currentProgram = prog;
