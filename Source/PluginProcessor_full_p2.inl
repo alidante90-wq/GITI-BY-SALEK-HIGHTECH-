@@ -15,7 +15,9 @@ void SalekHightechAudioProcessor::applyParamsToEngine (int samplesThisBlock)
     synthEngine.setOsc1Warp(juce::jlimit(0.f,1.f, g("osc1_warp")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc1Warp)*0.5f));
     synthEngine.setOsc2Warp(juce::jlimit(0.f,1.f, g("osc2_warp")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc2Warp)*0.5f));
     synthEngine.setOsc3Warp(juce::jlimit(0.f,1.f, g("osc3_warp")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc3Warp)*0.5f));
-    synthEngine.setOsc1Fold(g("osc1_fold")); synthEngine.setOsc2Fold(g("osc2_fold")); synthEngine.setOsc3Fold(g("osc3_fold"));
+    synthEngine.setOsc1Fold(juce::jlimit(0.f,1.f, g("osc1_fold")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc1Fold)*0.5f));
+    synthEngine.setOsc2Fold(juce::jlimit(0.f,1.f, g("osc2_fold")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc2Fold)*0.5f));
+    synthEngine.setOsc3Fold(juce::jlimit(0.f,1.f, g("osc3_fold")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc3Fold)*0.5f));
     synthEngine.setOsc1Drive(juce::jlimit(0.f,1.f,g("osc1_drive")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc1Drive)*0.5f));
     synthEngine.setOsc2Drive(juce::jlimit(0.f,1.f,g("osc2_drive")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc2Drive)*0.5f));
     synthEngine.setOsc3Drive(juce::jlimit(0.f,1.f,g("osc3_drive")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc3Drive)*0.5f));
@@ -42,8 +44,12 @@ void SalekHightechAudioProcessor::applyParamsToEngine (int samplesThisBlock)
         synthEngine.setOsc2Unison (u2, d2, s2);
         synthEngine.setOsc3Unison (u3, d3, s3);
     }
-    synthEngine.setFm2to1(g("fm_2to1")); synthEngine.setFm3to1(g("fm_3to1")); synthEngine.setFm3to2(g("fm_3to2"));
-    synthEngine.setPm2to1(g("pm_2to1")); synthEngine.setRm2to1(g("rm_2to1")); synthEngine.setAm2to1(g("am_2to1"));
+    synthEngine.setFm2to1(juce::jlimit(0.f,1.f, g("fm_2to1")+modMatrix.getModulation(salek::ModMatrix::Dest::Fm2to1)*0.5f));
+    synthEngine.setFm3to1(juce::jlimit(0.f,1.f, g("fm_3to1")+modMatrix.getModulation(salek::ModMatrix::Dest::Fm3to1)*0.5f));
+    synthEngine.setFm3to2(g("fm_3to2"));
+    synthEngine.setPm2to1(juce::jlimit(0.f,1.f, g("pm_2to1")+modMatrix.getModulation(salek::ModMatrix::Dest::Pitch)*0.35f));
+    synthEngine.setRm2to1(g("rm_2to1"));
+    synthEngine.setAm2to1(g("am_2to1"));
     float cut = g("filter_cutoff");
     float reso = g("filter_reso");
     // Smart macros: 1=Bright 2=Space 3=Destroy 4=Width
@@ -68,9 +74,9 @@ void SalekHightechAudioProcessor::applyParamsToEngine (int samplesThisBlock)
     synthEngine.setFilterDrive(g("filter_drive")); synthEngine.setFilterEnvAmt(juce::jlimit(0.f,1.f,g("filter_env")+modMatrix.getModulation(salek::ModMatrix::Dest::FilterEnv)*0.5f));
     synthEngine.setFilterMode((int)g("filter_mode"));
     synthEngine.setFilterRoute((int)g("filter_route"));
-    synthEngine.setNoiseLevel(g("noise_level"));
-    synthEngine.setSubLevel(g("sub_level"));
-    synthEngine.setGlide(g("glide"));
+    synthEngine.setNoiseLevel(juce::jlimit(0.f,1.f, g("noise_level")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc3Level)*0.25f));
+    synthEngine.setSubLevel(juce::jlimit(0.f,1.f, g("sub_level")+modMatrix.getModulation(salek::ModMatrix::Dest::Osc1Level)*0.25f));
+    synthEngine.setGlide(juce::jlimit(0.f,1.f, g("glide")+std::abs(modMatrix.getModulation(salek::ModMatrix::Dest::Pitch))*0.15f));
     synthEngine.setAmpAttack(g("amp_attack")); synthEngine.setAmpDecay(g("amp_decay"));
     synthEngine.setAmpSustain(g("amp_sustain")); synthEngine.setAmpRelease(g("amp_release"));
     synthEngine.setLfoRate(g("lfo_rate")); synthEngine.setLfoAmount(g("lfo_amount")); synthEngine.setLfoWave((int)g("lfo_wave"));
@@ -240,7 +246,7 @@ void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         return 0.f;
     };
    
-    const float bassify = apvts.getRawParameterValue("bassify")->load();
+    const float bassify = juce::jlimit(0.f,1.f, apvts.getRawParameterValue("bassify")->load() + modMatrix.getModulation(salek::ModMatrix::Dest::Bassify)*0.5f);
     if (bassify > 1e-4f && ! bypassed ("bassify_bypass"))
     {
         static float lp1L = 0.f, lp1R = 0.f, lp2L = 0.f, lp2R = 0.f;
@@ -304,8 +310,10 @@ void SalekHightechAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     magic.process (buffer);
 
-    float gain = apvts.getRawParameterValue("master_gain")->load();
-    const float drive = apvts.getRawParameterValue("master_drive")->load();
+    float gain = juce::jlimit(0.f, 2.f, apvts.getRawParameterValue("master_gain")->load()
+        + modMatrix.getModulation(salek::ModMatrix::Dest::Amp)*0.35f);
+    const float drive = juce::jlimit(0.f, 1.f, apvts.getRawParameterValue("master_drive")->load()
+        + modMatrix.getModulation(salek::ModMatrix::Dest::DistDrive)*0.25f);
     // Default is a transparent gain stage. Master Drive adds one intentional
     // normalized saturator; the SHAE safety limiter remains the final ceiling.
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
