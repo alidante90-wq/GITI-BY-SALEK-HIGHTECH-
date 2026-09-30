@@ -12,13 +12,15 @@ void SalekVoice::prepare (double sampleRate, int)
 {
     sr = sampleRate;
     osc1.prepare (sampleRate); osc2.prepare (sampleRate); osc3.prepare (sampleRate); subOsc.prepare (sampleRate);
+    for (auto& u : unisonOscs) u.prepare (sampleRate);
     juce::dsp::ProcessSpec spec { sampleRate, 512, 1 };
     filter.prepare (spec);
     ampEnv.prepare (sampleRate); filterEnv.prepare (sampleRate); modEnv.prepare (sampleRate);
     lfo1.prepare (sampleRate); lfo2.prepare (sampleRate); lfo3.prepare (sampleRate); lfo4.prepare (sampleRate);
+    // Musical cent spreads: -18, -7, 0, +7, +18
     static const float centsTable[maxUnison] = { -18.f, -7.f, 0.f, 7.f, 18.f };
     for (int i = 0; i < maxUnison; ++i)
-        unisonDetune[i] = std::pow (2.0f, centsTable[i] / 1200.0f) - 1.0f;
+        unisonDetune[i] = centsTable[i];
     isPrepared = true; paramsDirty = true;
 }
 
@@ -27,6 +29,7 @@ void SalekVoice::startNote (int midiNoteNumber, float vel, juce::SynthesiserSoun
     currentNote = midiNoteNumber; velocity = vel;
     noteHz = (float) juce::MidiMessage::getMidiNoteInHertz (midiNoteNumber);
     osc1.reset(); osc2.reset(); osc3.reset(); subOsc.reset(); filter.reset();
+    for (auto& u : unisonOscs) u.reset();
     ampEnv.noteOn(); filterEnv.noteOn(); modEnv.noteOn();
     lfo1.reset(); lfo2.reset(); lfo3.reset(); lfo4.reset();
     paramsDirty = true;
@@ -65,7 +68,10 @@ void SalekVoice::updateParameters()
     lfo2.setRate(get("lfo2_rate")); lfo2.setDepth(get("lfo2_depth")); lfo2.setShape(static_cast<LFO::Shape>((int)get("lfo2_shape")));
     lfo3.setRate(get("lfo3_rate")); lfo3.setDepth(get("lfo3_depth")); lfo3.setShape(static_cast<LFO::Shape>((int)get("lfo3_shape")));
     lfo4.setRate(get("lfo4_rate")); lfo4.setDepth(get("lfo4_depth")); lfo4.setShape(static_cast<LFO::Shape>((int)get("lfo4_shape")));
-    unisonVoices = juce::jlimit(1, maxUnison, (int)get("osc1_unison")); unisonDetuneAmt = get("osc1_udet")*0.01f;
+    unisonVoices = juce::jlimit(1, maxUnison, (int) get("osc1_unison"));
+    // osc1_udet is cents amount scale (typical 0..30+)
+    unisonDetuneAmt = juce::jlimit (0.f, 1.f, get("osc1_udet") / 30.f);
+    unisonSpread = juce::jlimit (0.f, 1.f, get("osc1_uspread"));
     paramsDirty = false;
 }
 
@@ -91,6 +97,8 @@ void SalekVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int st
     auto* left = outputBuffer.getWritePointer (0, startSample);
     auto* right = outputBuffer.getNumChannels() > 1 ? outputBuffer.getWritePointer (1, startSample) : left;
     const float noteOffsetBase = (currentNote - 60) * baseKeytrack * 40.0f;
+    const int nv = unisonVoices;
+    const float uGain = 1.0f / std::sqrt ((float) juce::jmax (1, nv));
 
     for (int i = 0; i < numSamples; ++i)
     {
@@ -108,12 +116,43 @@ void SalekVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int st
         const float mCut = modDests[ModulationMatrix::FilterCutoff]*5500.f, mRes = modDests[ModulationMatrix::FilterRes]*0.45f;
         const float mDrv = modDests[ModulationMatrix::FilterDrive]*0.5f, mAmp = modDests[ModulationMatrix::AmpLevel];
 
-        osc1.setFrequency(baseOsc1Freq); osc1.setLevel(juce::jlimit(0.f,1.5f,(baseOsc1Level+m1L)*velocity));
-        osc1.setWavetablePos(juce::jlimit(0.f,1.f,baseOsc1WT+m1W)); osc1.setMorph(juce::jlimit(0.f,1.f,baseOsc1Morph+m1M));
-        osc1.setWarp(juce::jlimit(0.f,1.f,baseOsc1Warp+m1Wp)); osc1.setFM(baseOsc1FM+m1F);
-        osc1.setAM(juce::jlimit(0.f,1.f,baseOsc1AM+m1A)); osc1.setRM(juce::jlimit(0.f,1.f,baseOsc1RM+m1R));
-        osc1.setWarpMode(Oscillator::WarpMode::Fold);
+        const float o1Lvl = juce::jlimit (0.f, 1.5f, (baseOsc1Level + m1L) * velocity) * uGain;
+        const float wt = juce::jlimit (0.f, 1.f, baseOsc1WT + m1W);
+        const float morph = juce::jlimit (0.f, 1.f, baseOsc1Morph + m1M);
+        const float warp = juce::jlimit (0.f, 1.f, baseOsc1Warp + m1Wp);
+        const float fm = baseOsc1FM + m1F;
+        const float am = juce::jlimit (0.f, 1.f, baseOsc1AM + m1A);
+        const float rm = juce::jlimit (0.f, 1.f, baseOsc1RM + m1R);
 
+        // ---- Real unison: center + detuned voices with independent phase ----
+        float uL = 0.f, uR = 0.f;
+        for (int v = 0; v < nv; ++v)
+        {
+            const float cents = unisonDetune[(size_t) v] * unisonDetuneAmt;
+            const float ratio = std::pow (2.0f, cents / 1200.0f);
+            const float f = baseOsc1Freq * ratio;
+
+            Oscillator* o = (v == 0) ? &osc1 : &unisonOscs[(size_t) (v - 1)];
+            o->setFrequency (f);
+            o->setLevel (o1Lvl);
+            o->setWavetablePos (wt);
+            o->setMorph (morph);
+            o->setWarp (warp);
+            o->setFM (fm);
+            o->setAM (am);
+            o->setRM (rm);
+            o->setWarpMode (Oscillator::WarpMode::Fold);
+
+            const float s = o->process();
+            // Stereo spread: negative cents → L, positive → R, center → both
+            const float pan = (unisonDetune[(size_t) v] / 18.f) * unisonSpread; // -1..+1
+            const float gL = 0.5f * (1.f - pan);
+            const float gR = 0.5f * (1.f + pan);
+            uL += s * gL;
+            uR += s * gR;
+        }
+
+        // Osc 2 / 3 / sub / noise (mono into mix, then stereo from unison)
         osc2.setFrequency(baseOsc2Freq); osc2.setLevel(juce::jlimit(0.f,1.5f,(baseOsc2Level+m2L)*velocity));
         osc2.setWavetablePos(juce::jlimit(0.f,1.f,baseOsc2WT+m2W)); osc2.setMorph(juce::jlimit(0.f,1.f,baseOsc2Morph+m2M));
         osc2.setWarp(juce::jlimit(0.f,1.f,baseOsc2Warp+m2Wp)); osc2.setFM(baseOsc2FM+m2F);
@@ -134,18 +173,25 @@ void SalekVoice::renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int st
         filter.setDrive(juce::jlimit(0.f,1.f,baseDrive+mDrv));
 
         const float s2p = osc2.getLastSample(), s3p = osc3.getLastSample();
-        osc1.setPhaseMod(s2p*0.7f + s3p*0.3f + modSources[ModulationMatrix::LFO1]*0.35f);
         osc2.setPhaseMod(s3p*0.5f + modSources[ModulationMatrix::LFO2]*0.25f);
         osc3.setPhaseMod(modSources[ModulationMatrix::LFO3]*0.2f);
+        // Mild FM into unison center only
+        osc1.setPhaseMod(s2p*0.7f + s3p*0.3f + modSources[ModulationMatrix::LFO1]*0.35f);
         osc1.setRingModInput(s2p); osc2.setRingModInput(s3p); osc3.setRingModInput(s2p);
 
-        float mixed = osc1.process() + osc2.process() + osc3.process() + subOsc.process()
-                    + (noiseRandom.nextFloat()*2.f - 1.f) * noiseAmt;
+        const float rest = osc2.process() + osc3.process() + subOsc.process()
+                         + (noiseRandom.nextFloat()*2.f - 1.f) * noiseAmt;
+
         float e2 = filterEnv.process(), e1 = ampEnv.process(); modEnv.process();
-        float y = filter.processSample(mixed * (1.f + e2 * 0.3f));
-        y *= e1 * juce::jlimit(0.f, 1.5f, 1.f + mAmp);
-        y = std::tanh(y * 1.35f);
-        left[i] += y; right[i] += y;
+        float yL = filter.processSample ((uL + rest * 0.5f) * (1.f + e2 * 0.3f));
+        float yR = filter.processSample ((uR + rest * 0.5f) * (1.f + e2 * 0.3f));
+        const float amp = e1 * juce::jlimit (0.f, 1.5f, 1.f + mAmp);
+        yL = std::tanh (yL * 1.35f) * amp;
+        yR = std::tanh (yR * 1.35f) * amp;
+
+        left[i]  += yL;
+        right[i] += yR;
+
         if (!ampEnv.isActive()) { clearCurrentNote(); break; }
     }
 }
