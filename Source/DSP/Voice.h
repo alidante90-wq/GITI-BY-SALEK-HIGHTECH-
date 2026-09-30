@@ -27,6 +27,7 @@ public:
     void renderNextBlock (juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
 
     void prepare (double sampleRate, int samplesPerBlock);
+    void markParamsDirty() noexcept { paramsDirty = true; }
 
 private:
     void updateParameters();
@@ -39,7 +40,6 @@ private:
     juce::AudioProcessorValueTreeState& apvts;
     ModulationMatrix& modMatrix;
 
-    // 3 main oscs + sub (unison handled by detune/voices later)
     Oscillator osc1, osc2, osc3;
     Oscillator subOsc;
 
@@ -50,7 +50,6 @@ private:
     juce::Random noiseRandom;
     float noiseLevel = 0.0f;
 
-    // Simple unison (up to 5 voices per osc for performance)
     static constexpr int maxUnison = 5;
     std::array<float, maxUnison> unisonDetune {};
     int unisonVoices = 1;
@@ -58,8 +57,16 @@ private:
 
     double sr = 44100.0;
     bool isPrepared = false;
+    bool paramsDirty = true;
 
-    // Mod source buffer
+    float baseOsc1Freq = 440.f, baseOsc2Freq = 440.f, baseOsc3Freq = 440.f, baseSubFreq = 220.f;
+    float baseOsc1Level = 0.8f, baseOsc2Level = 0.f, baseOsc3Level = 0.f;
+    float baseSubLevel = 0.f, baseNoiseLevel = 0.f;
+    float baseOsc1WT = 0.f, baseOsc1Morph = 0.f, baseOsc1Warp = 0.f, baseOsc1FM = 0.f, baseOsc1AM = 0.f, baseOsc1RM = 0.f;
+    float baseOsc2WT = 0.f, baseOsc2Morph = 0.f, baseOsc2Warp = 0.f, baseOsc2FM = 0.f, baseOsc2AM = 0.f, baseOsc2RM = 0.f;
+    float baseOsc3WT = 0.f, baseOsc3Morph = 0.f, baseOsc3Warp = 0.f, baseOsc3FM = 0.f, baseOsc3AM = 0.f, baseOsc3RM = 0.f;
+    float baseCutoff = 8000.f, baseRes = 0.2f, baseDrive = 0.f, baseKeytrack = 0.f;
+
     float modSources[ModulationMatrix::numSources] {};
     float modDests[ModulationMatrix::numDests] {};
 };
