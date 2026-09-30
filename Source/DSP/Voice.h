@@ -42,6 +42,9 @@ private:
 
     Oscillator osc1, osc2, osc3;
     Oscillator subOsc;
+    // Real unison: dedicated oscillators for extra osc1 voices (center is osc1)
+    static constexpr int maxUnison = 5;
+    std::array<Oscillator, maxUnison - 1> unisonOscs {};
 
     MultiFilter filter;
     Envelope ampEnv, filterEnv, modEnv;
@@ -50,10 +53,10 @@ private:
     juce::Random noiseRandom;
     float noiseLevel = 0.0f;
 
-    static constexpr int maxUnison = 5;
     std::array<float, maxUnison> unisonDetune {};
     int unisonVoices = 1;
     float unisonDetuneAmt = 0.12f;
+    float unisonSpread = 0.5f; // 0 mono .. 1 full L/R
 
     double sr = 44100.0;
     bool isPrepared = false;
